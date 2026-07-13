@@ -5,20 +5,27 @@ dist/
 web-build/
 expo-env.d.ts
 *.tsbuildinfo
+.metro-health-check*
+.kotlin/
 
 # Native build output (using Expo CNG — native folders are generated)
 android/
 ios/
+/android
+/ios
 
 # Credentials & secrets — never commit
 .env
 .env.*
+.env*.local
 !.env.example
 *.jks
 *.p8
 *.p12
 *.key
+*.pem
 *.mobileprovision
+*.orig.*
 google-services.json
 GoogleService-Info.plist
 
