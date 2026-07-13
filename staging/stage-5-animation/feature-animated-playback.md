@@ -1,0 +1,36 @@
+# Feature: Animated playback
+_Stage: stage-5-animation · Status: not started_
+
+## Goal
+Record movement on a diagram by dragging elements along their paths, organised
+into phases (step 1: ball carrier runs + support runs; step 2: pass; …), then
+play the whole drill back as a smooth animation.
+
+## Success Criteria
+- [ ] Record mode: select element → drag its path → path stored as keyframes
+      in the scene document; per-phase organisation.
+- [ ] Playback animates all elements per phase with sensible relative timing;
+      pause/replay/scrub.
+- [ ] Runs smoothly on a mid-range phone with a realistic drill (10+ moving
+      elements).
+- [ ] Scene `version` migration: every pre-animation diagram in the library
+      still renders perfectly.
+
+## How We'll Verify
+Written when the stage is spec'd. Skeleton: animate one real drill end-to-end,
+show it to actual players at training, record whether they understood the
+drill without verbal explanation.
+
+## Verification Log
+_(empty)_
+
+## Open Questions
+- Timing model: fixed per-phase duration vs per-path speed vs draggable
+  timeline? Spike first.
+- Ball animation: independent element or passed between players as an event?
+- Export to video/GIF for sharing outside the app — in scope here or future
+  roadmap?
+
+## Notes & Decisions
+- Skia + Reanimated is the assumed stack (bet placed in Stage 2) — the spike
+  validates it before deep work.
