@@ -1,5 +1,5 @@
 # Feature: Auth & club structure
-_Stage: stage-1-foundation · Status: not started_
+_Stage: stage-1-foundation · Status: awaiting verification_
 
 ## Goal
 Coaches sign in with email on their own devices, and the database knows the
@@ -29,7 +29,12 @@ enforce who can see and change what.
 4. Kill and reopen the app → still signed in.
 
 ## Verification Log
-_(empty)_
+**2026-07-13 (automated, Claude):** verified with two disposable test accounts (deleted afterwards — club reset to empty so Cam's real signup becomes admin).
+- Signup trigger: first user via invite code `RUCK-7H3Q` → role **admin**; second → **coach**; both landed in Drill Deck RFC (SQL-verified profiles).
+- 8 REST probes with real HTTP requests: anon → `[]` on drills/profiles/teams ✓; anon reads `health_check` probe row (deliberate) ✓; coach password sign-in ✓; coach sees both members ✓; coach **denied team creation with RLS error 42501** ✓; coach reads 3 seeded teams ✓.
+- Browser: sign-in → auth gate redirect → library; sign-out → sign-in screen; session survived a dev-server restart (persistence).
+- Invite-code UI: sign-up screen validates the code via `validate_invite_code` RPC before creating the account.
+- **Remaining for Cam (device):** his own signup on his phone (becomes admin), app-restart session persistence on device.
 
 ## Open Questions
 - Password vs magic-link sign-in (leaning password — no email-deliverability

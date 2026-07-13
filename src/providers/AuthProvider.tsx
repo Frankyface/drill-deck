@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react';
 
+import { queryClient } from '../lib/queryClient';
 import { supabase } from '../lib/supabase';
 import type { Tables } from '../types/database.types';
 
@@ -69,9 +70,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (isMounted) setIsLoading(false);
     });
 
-    const { data: sub } = supabase.auth.onAuthStateChange(async (_event, next) => {
+    const { data: sub } = supabase.auth.onAuthStateChange(async (event, next) => {
       if (!isMounted) return;
       setSession(next);
+      // A different coach may sign in on this device — never serve them the
+      // previous account's cached data.
+      if (event === 'SIGNED_IN') queryClient.invalidateQueries();
+      if (event === 'SIGNED_OUT') queryClient.clear();
       if (next) {
         const p = await fetchProfile(next.user.id);
         if (isMounted) setProfile(p);

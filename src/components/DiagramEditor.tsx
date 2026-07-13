@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { runOnJS } from 'react-native-reanimated';
 import Svg, { Polyline } from 'react-native-svg';
@@ -68,11 +68,14 @@ export function DiagramEditor({
   const [mode, setMode] = useState<EditorMode>('move');
   const [isPlayMode, setIsPlayMode] = useState(false);
   const [activePhaseId, setActivePhaseId] = useState<string | null>(null);
-  const [canvasWidth, setCanvasWidth] = useState(0);
   const [arrowPreview, setArrowPreview] = useState<Vec2[]>([]);
 
+  // Deterministic width (no onLayout race): screen minus Screen padding, capped.
+  const { width: windowWidth } = useWindowDimensions();
+  const canvasWidth = Math.max(200, Math.min(windowWidth - 32, 560));
+
   const scene = history.present;
-  const scale = canvasWidth > 0 ? scaleForCanvas(canvasWidth) : 1;
+  const scale = scaleForCanvas(canvasWidth);
   const tokenSize = Math.max(20, Math.min(TOKEN_SIZE + 6, canvasWidth / 11));
 
   // Buffers for gesture-recorded data (JS side)
@@ -199,16 +202,14 @@ export function DiagramEditor({
     if (activePhaseId === phaseId) setActivePhaseId(null);
   };
 
-  const heightPx = canvasWidth > 0 ? canvasHeightFor(canvasWidth) : 0;
+  const heightPx = canvasHeightFor(canvasWidth);
   const arrows = scene.elements.filter((el) => el.type === 'arrow');
   const tokens = scene.elements.filter((el) => el.type !== 'arrow');
 
   if (isPlayMode) {
     return (
       <View>
-        <View onLayout={(e) => setCanvasWidth(e.nativeEvent.layout.width)}>
-          {canvasWidth > 0 && <PlaybackView scene={scene} widthPx={canvasWidth} />}
-        </View>
+        <PlaybackView scene={scene} widthPx={canvasWidth} />
         <Button
           label="Back to editing"
           variant="secondary"
@@ -259,12 +260,8 @@ export function DiagramEditor({
       )}
 
       {/* canvas */}
-      <View
-        style={styles.canvasWrap}
-        onLayout={(e) => setCanvasWidth(e.nativeEvent.layout.width)}
-        testID="editor-canvas"
-      >
-        {canvasWidth > 0 && (
+      <View style={styles.canvasWrap} testID="editor-canvas">
+        {(
           <GestureDetector gesture={arrowGesture}>
             <Animated.View style={{ width: canvasWidth, height: heightPx }}>
               <SvgPitch pitch={scene.pitch} widthPx={canvasWidth} />

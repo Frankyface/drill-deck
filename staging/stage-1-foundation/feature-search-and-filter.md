@@ -1,5 +1,5 @@
 # Feature: Search & filter the library
-_Stage: stage-1-foundation · Status: not started_
+_Stage: stage-1-foundation · Status: awaiting verification_
 
 ## Goal
 The payoff of tagging: a coach thinks "12 players, breakdown work, only cones"
@@ -32,7 +32,10 @@ tag filters that combine — fast and obvious on a phone.
    Cam's call, logged here).
 
 ## Verification Log
-_(empty)_
+**2026-07-13 (automated, Claude):**
+- 13 unit tests green on the pure filter/sort engine (`drillFilters.test.ts`): archived visibility, case-insensitive name+description search, category, player-count-in-range, "I only have this equipment" subset semantics, ALL-selected-skills, combined AND stacking, level 'all' passthrough, min-rating excluding unrated, all three sorts.
+- Browser: library renders search box, filter panel with every dimension, sort chips, result count footer, empty states; ★ 4.0 (1) rating badge appeared on the card after a review was saved.
+- **Remaining:** 50-drill seeded perf check and Cam's 3 real pitch-side lookups (device).
 
 ## Open Questions
 - Client-side filtering (simple, fine at club scale) vs Postgres queries

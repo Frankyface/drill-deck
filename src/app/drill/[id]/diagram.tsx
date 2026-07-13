@@ -13,7 +13,9 @@ export default function DiagramScreen() {
   const diagram = useDiagram(id);
   const saveDiagram = useSaveDiagram();
 
-  if (diagram.isLoading) {
+  // Wait for the revalidated fetch too — the editor snapshots its starting
+  // scene on mount, so it must never start from a stale hydrated cache.
+  if (diagram.isLoading || diagram.isFetching) {
     return (
       <Screen>
         <LoadingState />

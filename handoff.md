@@ -1,34 +1,44 @@
 # Handoff — drill-deck
-_Last updated: 2026-07-12 · Current stage: stage-1-foundation_
+_Last updated: 2026-07-13 · Current stage: all 5 stages implemented, awaiting device verification_
 
 ## 🎯 Goals
-Stand up the working shared drill library: an Expo app + Supabase backend where
-a coach signs in on their phone, adds a tagged drill, and finds drills by filter.
+Get Cam through the on-device verification checklist (help.md) so features can
+flip from `awaiting verification` to `verified done`, then roll out to coaches.
 
 ## 📍 Current State
-- Full doc system scaffolded, committed, and pushed to Frankyface/drill-deck (private).
-- No application code exists yet — the Expo app has not been created.
-- Supabase project not created yet (free tier; creation needs a cost-confirm step).
-- Stage 1 fully specified in `staging/stage-1-foundation/`; Stages 2–5 are sketches.
+- ALL five stages implemented: library+tags+search, diagram editor (Views+SVG),
+  progressions, session builder + run mode, reviews, animation record/playback.
+- `tsc` clean · **40/40 jest tests** · full browser e2e done (auth, CRUD,
+  filters, sessions, reviews, progressions, RLS probes, diagram save/render).
+- Supabase live (project `avygkafazentnxtdlaoh`): 5 migrations, RLS hardened
+  per advisor, seeded club "Drill Deck RFC" (invite `RUCK-7H3Q`), 3 teams,
+  full tag vocabularies. **Zero users — Cam's first signup becomes admin.**
+- Touch drag + visual animation playback unverifiable in the browser harness
+  (hidden tab suspends animation frames) — they're Cam's device checklist.
 
 ## 📂 Files I'm Working On
-- `staging/stage-1-foundation/feature-project-setup.md` — the active feature spec.
+- Nothing mid-flight. Opus adversarial review findings may add fixes next.
 
 ## ✅ Things I've Changed
-- 2026-07-12: Scaffolded the complete doc system (docs/, staging/, commands),
-  merged onto the existing GitHub stub commit, pushed to main.
+- 2026-07-13: Full app implementation + tests + browser e2e + RLS probes.
+- 2026-07-13: Fixed auth-gate stale-cache race; deterministic canvas width
+  (no onLayout race); editor waits for fresh scene fetch; SPA web output.
+- 2026-07-13: Debate-resolved product decisions logged in docs/decisions.md.
 
 ## ❌ Watch Out
-- Nothing yet — `docs/failed-approaches.md` is empty (expected at day zero).
-- `gh` CLI is NOT installed on this machine; use plain git over HTTPS (works).
+- Browser-pane testing: hidden tab **suspends rAF** — animations look frozen
+  but aren't broken. See docs/failed-approaches.md before "fixing" this again.
+- Expo static web output SSR-crashes with supabase-js → web.output = 'single'.
+- Supabase email confirmations are ON + rate-limited (2/hr) until Cam flips
+  the dashboard toggle (help.md).
 
 ## ➡️ Next Up
-1. Scaffold the Expo app at the repo root: `npx create-expo-app@latest . --template`
-   (TypeScript), confirm it boots via `npx expo start` + Expo Go on Cam's phone.
-2. Create the Supabase project (free tier) via the connected Supabase tooling.
-3. Wire supabase-js with `.env` + `.env.example`; smoke test: app screen shows a
-   row fetched from a `health_check` table. Full spec in the active feature file.
+1. Cam: run the device checklist in help.md (sign up with `RUCK-7H3Q` → you
+   become admin; add a drill; drag a diagram; record + play an animation).
+2. Address Opus review findings (if any outstanding at session end).
+3. After device pass: flip feature statuses to `verified done`, then EAS dev
+   build / distribution for the other coaches.
 
 ## 🔗 Pointer
 → Current stage folder: `staging/stage-1-foundation/` · Active feature file:
-`staging/stage-1-foundation/feature-project-setup.md`
+`staging/stage-1-foundation/feature-project-setup.md` (first device check)

@@ -1,5 +1,5 @@
 # Feature: Progressions
-_Stage: stage-3-sessions · Status: not started_
+_Stage: stage-3-sessions · Status: awaiting verification_
 
 ## Goal
 Real coaching moves through progressions: start simple, layer difficulty. A
@@ -18,7 +18,10 @@ Written when the stage is spec'd. Skeleton: build a real 3-step chain
 on-device, round-trip it, verify ordering survives edits and re-ordering.
 
 ## Verification Log
-_(empty)_
+**2026-07-13 (automated, Claude):** Model resolved by the delegated debate: **named progression groups + ordered join table** (drills reusable across groups) — see docs/decisions.md.
+- Browser: created "Decision-making pathway" from the drill detail screen; chain rendered with ordered steps and the "← you are here" marker; add-to-existing-group chips render for groups not containing the drill.
+- Schema: `progression_groups` + `progression_items(group_id, drill_id, position)` live with club-scoped RLS (creator/admin edits).
+- **Remaining for Cam (device):** build a real 3-step chain and reorder it.
 
 ## Open Questions
 - Simple linked list per drill, or named "progression groups" that hold an

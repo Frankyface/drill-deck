@@ -81,3 +81,54 @@ cones") — Postgres JSONB operators can cover that anyway.
 pushed over the stub initial commit) · **Because:** club tool, no reason to be
 public; name chosen by Cam · **Rejected:** public repo · **Revisit if:** Cam
 wants it as a portfolio piece later.
+
+## 2026-07-13 — Views + SVG for the diagram canvas (supersedes the Skia bet)
+**Chose:** Reanimated Animated.Views for draggable tokens over a react-native-svg
+pitch/arrow layer; Skia removed from dependencies · **Because:** the research
+spike found drill diagrams (~15–30 elements) are 10× below where Skia's batching
+pays off; Views render real DOM nodes on web (testable/inspectable) while a Skia
+canvas is an opaque blob; zero web setup vs a 2.9MB WASM boot shim · **Rejected:**
+Skia-first (the original tentative bet — it was explicitly "validate with a
+spike", and the spike said no) · **Revisit if:** Stage-5 playback janks with 10+
+moving elements on a mid-range Android — Skia is the contained escalation path
+(scene logic is renderer-agnostic).
+
+## 2026-07-13 — Debate-resolved product decisions (Cam delegated to an Opus debate)
+**Chose:** (a) email+password sign-in — both debaters independently converged
+(magic links = deep-link fragility + pitch-side email dependency); (b) club
+invite code at signup, first account in the club auto-becomes admin — kills the
+temp-password handoff failure and the approval-queue bottleneck; (c) drill
+photos deferred — diagrams shipped in the same build, so the adoption-gap
+argument dissolved; (d) progression groups + ordered join table — drill reuse
+across age-group pathways is the domain norm; the join table does linear chains
+at no extra cost and avoids the one truly painful migration; (e) sessions: flat
+reorder UX with a typed `phase` column — structure captured, no nested
+drag-and-drop; (f) reviews captured team-scoped (via session), displayed
+club-wide aggregate with per-note team context · **Rejected:** magic links,
+admin-precreated accounts, Stage-1 photo uploads, parent-chain progressions,
+free-text phase labels, aggregate-only rating storage · **Revisit if:** club
+adoption reveals different behavior (each is individually reversible).
+
+## 2026-07-13 — Client-side filtering over Postgres queries
+**Chose:** fetch the club's drills once (react-query cache, persisted) and
+filter/sort in pure TypeScript · **Because:** club scale is hundreds of drills,
+not millions; instant filtering; works offline from cache pitch-side; trivially
+unit-testable (13 tests) · **Rejected:** per-filter Postgres queries (network
+round-trip per filter tap, useless offline) · **Revisit if:** the library
+exceeds ~2,000 drills or multi-club sharing lands.
+
+## 2026-07-13 — Expo web output = 'single' (SPA), not 'static'
+**Chose:** SPA web output · **Because:** static output SSR-renders routes in
+Node at dev time, where supabase-js touches browser-only storage and crashes
+the server; the app is 100% authenticated so static rendering buys nothing ·
+**Rejected:** static/SSR output · **Revisit if:** a public marketing page ever
+lives in this app (it shouldn't — separate site instead).
+
+## 2026-07-13 — Auth gate renders nothing until redirects settle
+**Chose:** the root gate returns a spinner (never children) whenever the
+session state and the current route group disagree, and the query cache is
+invalidated on sign-in / cleared on sign-out · **Because:** a one-frame anon
+mount of protected screens cached empty query results as fresh, showing empty
+pickers after sign-in; cache clearing also prevents coach-A data flashing for
+coach-B on a shared device · **Rejected:** per-hook `enabled: !!session` threading
+(invasive, easy to forget on new hooks) · **Revisit if:** never — this is load-bearing.

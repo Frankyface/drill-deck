@@ -1,5 +1,5 @@
 # Feature: Session reviews
-_Stage: stage-4-reviews · Status: not started_
+_Stage: stage-4-reviews · Status: awaiting verification_
 
 ## Goal
 Close the coaching loop: rate and annotate how each drill actually ran with a
@@ -20,7 +20,12 @@ night it happens; check the notes appear on the drill pages and the sort order
 updates.
 
 ## Verification Log
-_(empty)_
+**2026-07-13 (automated, Claude):**
+- Review flow driven in the browser: 4★ + note on the session's drill → saved; **DB row confirmed** with coach attribution, team, and date.
+- Drill page surfaced it exactly per the debate verdict (capture team-scoped, display club-wide): "4.0 from 1 review", the note, "1st XV · 2026-07-13" context, "— Test Coach" attribution.
+- Library card showed the ★ 4.0 (1) badge **on a different account** (admin), and "Top rated" sort is wired with a unit-tested comparator.
+- Upsert path: one review per coach per drill-in-session (`unique(session_item_id, coach_id)`); editing pre-fills.
+- **Remaining for Cam (device):** review a real 5-drill session in under a minute.
 
 ## Open Questions
 - Free-form note only, or structured prompts ("what would you change?")?

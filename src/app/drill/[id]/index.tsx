@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { DiagramCanvas } from '../../../components/DiagramCanvas';
 import { useDiagram } from '../../../features/diagrams';
@@ -43,7 +43,8 @@ export default function DrillDetailScreen() {
   const createGroup = useCreateProgressionGroup();
   const addToGroup = useAddDrillToProgression();
   const [newGroupName, setNewGroupName] = useState('');
-  const [canvasWidth, setCanvasWidth] = useState(0);
+  const { width: windowWidth } = useWindowDimensions();
+  const canvasWidth = Math.max(200, Math.min(windowWidth - 32, 560));
 
   if (isLoading || !drill) {
     return (
@@ -81,15 +82,13 @@ export default function DrillDetailScreen() {
 
       {/* Diagram */}
       <SectionLabel>Diagram</SectionLabel>
-      <View onLayout={(e) => setCanvasWidth(e.nativeEvent.layout.width)}>
-        {diagram.data && canvasWidth > 0 ? (
-          <Pressable onPress={() => router.push(`/drill/${drill.id}/diagram`)}>
-            <DiagramCanvas scene={diagram.data.scene} widthPx={canvasWidth} />
-          </Pressable>
-        ) : (
-          <Muted>No diagram yet.</Muted>
-        )}
-      </View>
+      {diagram.data ? (
+        <Pressable onPress={() => router.push(`/drill/${drill.id}/diagram`)}>
+          <DiagramCanvas scene={diagram.data.scene} widthPx={canvasWidth} />
+        </Pressable>
+      ) : (
+        <Muted>No diagram yet.</Muted>
+      )}
       <Button
         label={diagram.data ? 'Edit diagram / animate' : '+ Draw the diagram'}
         variant="secondary"

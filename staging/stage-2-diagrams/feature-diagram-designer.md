@@ -1,5 +1,5 @@
 # Feature: Touch diagram designer
-_Stage: stage-2-diagrams · Status: not started_
+_Stage: stage-2-diagrams · Status: awaiting verification_
 
 ## Goal
 A coach opens a drill, taps "Add diagram", and drags players (two team
@@ -23,7 +23,12 @@ drill's diagram on-device under screen recording; kill/reopen round-trip; scene
 JSON inspected in Supabase; jank check while dragging with 20+ elements placed.
 
 ## Verification Log
-_(empty)_
+**2026-07-13 (automated, Claude):** Built with **Reanimated Views + react-native-svg, NOT Skia** — the research spike overturned the Skia bet (see docs/decisions.md 2026-07-13 entry).
+- Browser: editor renders palette, pitch canvas at correct 70:100 aspect, all element types add via palette (8 pieces: 3 attackers, 2 defenders, 2 cones, ball — DOM-verified with distinct colors), pitch background cycler, undo, arrow-mode instructions.
+- Save path: the app's own save mutation wrote a v2 scene (8 elements) to `diagrams` as the signed-in coach — row confirmed in Supabase (RLS write path proven).
+- Render path: a curated 10-element scene (spread positions, 2 arrows, 2 phases) loaded from the DB rendered every token at the mathematically correct pixel position (spot-checked coordinates) plus both SVG arrows; thumbnail renders on the drill detail page.
+- Scene engine: 15 unit tests (zod validation, v1→v2 migration, JSON round-trip, immutable ops, undo cap, meters↔px, snap/clamp).
+- **Not verifiable in the browser harness:** finger drag-and-drop (the test browser can't produce trusted pointer events for gesture-handler; drag commit logic is unit-tested) — **on Cam's device checklist**, including the 5-minute diagram build criterion.
 
 ## Open Questions
 - Skia canvas vs plain Reanimated views for v1 of the designer? (Skia is the

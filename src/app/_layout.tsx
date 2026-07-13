@@ -23,7 +23,11 @@ function AuthGate({ children }: { children: ReactNode }) {
     }
   }, [session, isLoading, inAuthScreens, router]);
 
+  // Never render protected screens while signed out (and vice versa) — a
+  // brief anon mount would cache empty query results as fresh data.
   if (isLoading) return <LoadingState />;
+  if (!session && !inAuthScreens) return <LoadingState />;
+  if (session && inAuthScreens) return <LoadingState />;
   return <>{children}</>;
 }
 

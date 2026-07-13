@@ -1,5 +1,5 @@
 # Feature: Drill create / edit / archive
-_Stage: stage-1-foundation · Status: not started_
+_Stage: stage-1-foundation · Status: awaiting verification_
 
 ## Goal
 The heart of the app: any coach adds a drill from their phone fast enough to do
@@ -43,7 +43,11 @@ the library is club memory.
 4. Validation: try to save an empty form → inline errors, nothing saved.
 
 ## Verification Log
-_(empty)_
+**2026-07-13 (automated, Claude):**
+- Created "3v2 Decision Grid" through the real UI: name, category (Attack & evasion), 4–12 players, description, 2 skill focuses, 2 equipment tags, 20x20 grid, high intensity, all levels, setup + coaching points.
+- Full round-trip verified: every field and tag rendered identically on the detail screen; row + m2m rows confirmed in Supabase.
+- Edit path exercised implicitly (admin saw Edit button on the coach's drill — permission logic works both directions).
+- **Not yet exercised end-to-end:** empty-form validation in browser (logic unit-level only), archive/restore round-trip, and the timed <2-minute phone entry — all on Cam's device checklist.
 
 ## Open Questions
 - Should category/equipment seed lists be editable by admin in-app in v1, or
