@@ -17,13 +17,15 @@ flip from `awaiting verification` to `verified done`, then roll out to coaches.
   (hidden tab suspends animation frames) — they're Cam's device checklist.
 
 ## 📂 Files I'm Working On
-- Nothing mid-flight. Opus adversarial review findings may add fixes next.
+- Nothing mid-flight. Audit findings all addressed or logged as decisions.
 
 ## ✅ Things I've Changed
 - 2026-07-13: Full app implementation + tests + browser e2e + RLS probes.
 - 2026-07-13: Fixed auth-gate stale-cache race; deterministic canvas width
   (no onLayout race); editor waits for fresh scene fetch; SPA web output.
-- 2026-07-13: Debate-resolved product decisions logged in docs/decisions.md.
+- 2026-07-13: Opus adversarial audit: 0 critical/high. Fixed all 4 mediums +
+  4 lows (level-"all" filter bug, WITH CHECK on all 13 UPDATE policies,
+  atomic set_drill_tags RPC — REST-verified live, RDP input cap, timer leak).
 
 ## ❌ Watch Out
 - Browser-pane testing: hidden tab **suspends rAF** — animations look frozen

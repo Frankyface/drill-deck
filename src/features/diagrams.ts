@@ -25,7 +25,12 @@ export function useDiagram(drillId: string | undefined) {
       if (error) throw new Error(`Failed to load diagram: ${error.message}`);
       if (!data) return null;
       // Validate + migrate at the boundary — never trust stored JSON blindly.
-      return { id: data.id, drill_id: data.drill_id, scene: parseScene(data.scene) };
+      // A corrupt scene degrades to "no diagram" instead of an error state.
+      try {
+        return { id: data.id, drill_id: data.drill_id, scene: parseScene(data.scene) };
+      } catch {
+        return null;
+      }
     },
   });
 }

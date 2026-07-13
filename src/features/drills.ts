@@ -86,25 +86,13 @@ export function useDrill(drillId: string | undefined) {
 }
 
 async function replaceDrillTags(drillId: string, input: DrillInput): Promise<void> {
-  const [delSkills, delEquip] = await Promise.all([
-    supabase.from('drill_skill_focuses').delete().eq('drill_id', drillId),
-    supabase.from('drill_equipment').delete().eq('drill_id', drillId),
-  ]);
-  if (delSkills.error) throw new Error(delSkills.error.message);
-  if (delEquip.error) throw new Error(delEquip.error.message);
-
-  if (input.skillFocusIds.length > 0) {
-    const { error } = await supabase
-      .from('drill_skill_focuses')
-      .insert(input.skillFocusIds.map((id) => ({ drill_id: drillId, skill_focus_id: id })));
-    if (error) throw new Error(error.message);
-  }
-  if (input.equipmentIds.length > 0) {
-    const { error } = await supabase
-      .from('drill_equipment')
-      .insert(input.equipmentIds.map((id) => ({ drill_id: drillId, equipment_id: id })));
-    if (error) throw new Error(error.message);
-  }
+  // Single RPC = single transaction: a failure can never strip existing tags.
+  const { error } = await supabase.rpc('set_drill_tags', {
+    d: drillId,
+    skill_ids: input.skillFocusIds,
+    equipment_ids: input.equipmentIds,
+  });
+  if (error) throw new Error(`Could not save tags: ${error.message}`);
 }
 
 function drillColumns(input: DrillInput) {

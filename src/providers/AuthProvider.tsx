@@ -41,7 +41,7 @@ async function fetchProfile(userId: string): Promise<Profile | null> {
     .eq('id', userId)
     .maybeSingle();
   if (error) {
-    console.warn('Failed to load profile:', error.message);
+    if (__DEV__) console.warn('Failed to load profile:', error.message);
     return null;
   }
   return data as Profile | null;

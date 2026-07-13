@@ -70,7 +70,11 @@ export function filterDrills(drills: DrillListItem[], f: DrillFilters): DrillLis
     }
 
     if (f.intensity && drill.intensity !== f.intensity) return false;
-    if (f.level && drill.level !== f.level && drill.level !== 'all') return false;
+    // Selecting "all" as the level filter means "no level restriction" —
+    // drills tagged 'all' also match any specific level filter.
+    if (f.level && f.level !== 'all' && drill.level !== f.level && drill.level !== 'all') {
+      return false;
+    }
 
     if (f.minRating !== null) {
       if (drill.avg_rating === null || drill.avg_rating < f.minRating) return false;

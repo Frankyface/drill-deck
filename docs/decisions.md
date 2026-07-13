@@ -132,3 +132,13 @@ mount of protected screens cached empty query results as fresh, showing empty
 pickers after sign-in; cache clearing also prevents coach-A data flashing for
 coach-B on a shared device · **Rejected:** per-hook `enabled: !!session` threading
 (invasive, easy to forget on new hooks) · **Revisit if:** never — this is load-bearing.
+
+## 2026-07-13 — Team self-join stays open (trusted-club model)
+**Chose:** any club member can join/leave any team themselves (and thereby edit
+that team's sessions); admin can also assign · **Because:** the adversarial
+audit flagged this as a permission-escalation path, but for one real club of
+colleagues it IS the intended collaboration model — an approval flow would
+recreate the admin-bottleneck the onboarding debate rejected · **Rejected:**
+admin-only team assignment · **Revisit if:** a coach outside a team ever
+tampers with another team's plans (then flip `team_coaches_insert` to admin-only
+— a one-line policy change).

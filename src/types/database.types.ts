@@ -662,6 +662,10 @@ export type Database = {
       }
     }
     Functions: {
+      set_drill_tags: {
+        Args: { d: string; skill_ids: string[]; equipment_ids: string[] }
+        Returns: undefined
+      }
       can_edit_drill: { Args: { d: string }; Returns: boolean }
       can_edit_progression_group: { Args: { g: string }; Returns: boolean }
       can_edit_session: { Args: { s: string }; Returns: boolean }

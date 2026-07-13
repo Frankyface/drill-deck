@@ -131,11 +131,20 @@ function perpendicularDistance(point: Vec2, lineStart: Vec2, lineEnd: Vec2): num
 }
 
 /** Convert a recorded drag (samples with wall-clock ms) into track keyframes. */
+/** Long recordings are pre-decimated so RDP recursion depth stays bounded. */
+const MAX_RECORDING_SAMPLES = 400;
+
 export function samplesToKeyframes(
   samples: { position: Vec2; atMs: number }[],
   epsilonM: number = 0.8,
 ): { t: number; position: Vec2 }[] {
   if (samples.length < 2) return [];
+  if (samples.length > MAX_RECORDING_SAMPLES) {
+    const stride = Math.ceil(samples.length / MAX_RECORDING_SAMPLES);
+    const last = samples[samples.length - 1];
+    samples = samples.filter((_, i) => i % stride === 0);
+    if (samples[samples.length - 1] !== last) samples = [...samples, last];
+  }
   const t0 = samples[0].atMs;
   const t1 = samples[samples.length - 1].atMs;
   const span = Math.max(1, t1 - t0);

@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { useMySessionReviews, useUpsertReview } from '../../../features/reviews';
@@ -31,6 +31,13 @@ export default function SessionReviewScreen() {
   const [drafts, setDrafts] = useState<Record<string, DraftReview>>({});
   const [error, setError] = useState<string | null>(null);
   const [savedCount, setSavedCount] = useState<number | null>(null);
+  const backTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (backTimer.current) clearTimeout(backTimer.current);
+    };
+  }, []);
 
   // Pre-fill from existing reviews (editing a past review just works).
   useEffect(() => {
@@ -80,7 +87,7 @@ export default function SessionReviewScreen() {
         });
       }
       setSavedCount(rated.length);
-      setTimeout(() => router.back(), 900);
+      backTimer.current = setTimeout(() => router.back(), 900);
     } catch (e) {
       setError(String(e));
     }

@@ -125,6 +125,12 @@ describe('filterDrills', () => {
     expect(result.map((d) => d.id)).toEqual(['a', 'b']); // both are level 'all'
   });
 
+  test('selecting level "all" as the filter restricts nothing (audit M1)', () => {
+    const withMinis = [...all, makeDrill({ id: 'm', name: 'Minis fun', level: 'minis' })];
+    const result = filterDrills(withMinis, { ...EMPTY_FILTERS, level: 'all' });
+    expect(result.map((d) => d.id)).toEqual(['a', 'b', 'm']);
+  });
+
   test('minRating filter excludes unrated drills', () => {
     expect(filterDrills(all, { ...EMPTY_FILTERS, minRating: 4 }).map((d) => d.id)).toEqual(['b']);
   });
