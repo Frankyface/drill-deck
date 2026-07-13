@@ -45,3 +45,15 @@ break the preview harness's unquoted spawn; literal backslashes got eaten too.
 "Confirm email" defaults ON, so the second test signup 429'd. · **Do instead:**
 create test users in SQL (auth.users + auth.identities with extensions.crypt)
 — the profile trigger fires the same either way; delete them when done.
+
+## 2026-07-13 — TestFlight build crashed instantly on launch (build #2)
+**Why it failed:** `.env` is gitignored, so EAS cloud builds never receive it —
+`EXPO_PUBLIC_SUPABASE_URL/KEY` were undefined at bundle time and the supabase
+client factory's fail-fast throw killed the app 0.15s after launch (RCTFatal,
+SIGABRT — TestFlight crash report confirmed a JS fatal). The build log had
+warned: "No environment variables found for the 'production' environment."
+Dev builds masked it because Metro on the PC loads the local .env.
+· **Do instead:** keep the publishable URL/key registered as EAS project env
+vars for ALL environments (production/preview/development) — done via
+`eas env:create`, verify with `eas env:list --environment production` before
+any store build. The fail-fast throw stays: it caught a real misconfiguration.
