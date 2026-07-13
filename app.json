@@ -8,7 +8,10 @@
     "scheme": "drilldeck",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "bundleIdentifier": "com.frankyface.drilldeck"
+      "bundleIdentifier": "com.frankyface.drilldeck",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
