@@ -6,7 +6,7 @@ import {
   PITCH_LENGTH_M,
   PITCH_WIDTH_M,
   type ArrowElement,
-  type SceneV2,
+  type SceneV3,
 } from '../scene/schema';
 import { colors } from '../ui/theme';
 import { SvgPitch } from './SvgPitch';
@@ -66,7 +66,7 @@ export function DiagramCanvas({
   widthPx,
   tokenSize,
 }: {
-  scene: SceneV2;
+  scene: SceneV3;
   widthPx: number;
   tokenSize?: number;
 }) {
@@ -92,6 +92,23 @@ export function DiagramCanvas({
         {arrows.map((arrow) => (
           <ArrowShape key={arrow.id} arrow={arrow} scale={scale} />
         ))}
+        {scene.runs.map((run) => {
+          const owner = scene.elements.find((e) => e.id === run.elementId);
+          const team = owner?.type === 'player' ? owner.team : 'neutral';
+          const stroke =
+            team === 'attack' ? '#fca5a5' : team === 'defence' ? '#93c5fd' : '#cbd5e1';
+          return (
+            <Polyline
+              key={`run-${run.elementId}`}
+              points={run.points.map((p) => `${p.x * scale},${p.y * scale}`).join(' ')}
+              fill="none"
+              stroke={stroke}
+              strokeWidth={2}
+              strokeDasharray="2 5"
+              strokeLinecap="round"
+            />
+          );
+        })}
       </Svg>
       {tokens.map((el) => (
         <View
@@ -105,7 +122,7 @@ export function DiagramCanvas({
           <TokenView element={el} size={size} />
         </View>
       ))}
-      {scene.phases.length > 0 ? (
+      {scene.runs.length > 0 || scene.passes.length > 0 ? (
         <View
           style={{
             position: 'absolute',

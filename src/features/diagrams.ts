@@ -1,12 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { supabase } from '../lib/supabase';
-import { parseScene, type SceneV2 } from '../scene/schema';
+import { parseScene, type SceneV3 } from '../scene/schema';
 
 export type DiagramRecord = {
   id: string;
   drill_id: string;
-  scene: SceneV2;
+  scene: SceneV3;
 };
 
 /** One diagram per drill in v1 (schema supports more via sort_order later). */
@@ -46,7 +46,7 @@ export function useSaveDiagram() {
     }: {
       drillId: string;
       diagramId: string | null;
-      scene: SceneV2;
+      scene: SceneV3;
       userId: string;
     }) => {
       if (diagramId) {
@@ -73,13 +73,13 @@ export function useSaveDiagram() {
 export function useAllDiagramScenes() {
   return useQuery({
     queryKey: ['diagrams', 'all'],
-    queryFn: async (): Promise<Record<string, SceneV2>> => {
+    queryFn: async (): Promise<Record<string, SceneV3>> => {
       const { data, error } = await supabase
         .from('diagrams')
         .select('drill_id, scene')
         .order('sort_order');
       if (error) throw new Error(`Failed to load diagrams: ${error.message}`);
-      const byDrill: Record<string, SceneV2> = {};
+      const byDrill: Record<string, SceneV3> = {};
       for (const row of data) {
         if (byDrill[row.drill_id]) continue; // first diagram per drill wins
         try {

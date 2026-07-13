@@ -142,3 +142,47 @@ recreate the admin-bottleneck the onboarding debate rejected · **Rejected:**
 admin-only team assignment · **Revisit if:** a coach outside a team ever
 tampers with another team's plans (then flip `team_coaches_insert` to admin-only
 — a one-line policy change).
+
+## 2026-07-13 — Sharing-platform verdicts (second Opus debate, both sides converged)
+**Chose:** (a) new drills default PRIVATE with one-tap widening (share is
+deliberate; retraction is a social incident); (b) clubs REMOVED — teams are the
+only grouping, membership is many-to-many WITH ROLES (admin/coach), the role
+column being the load-bearing primitive; (c) public = signed-in users for now,
+schema leaves a clean seam for anonymous read via a sanitized view later;
+(d) owner-only content edits + team-admin lifecycle rights (unshare) +
+copy-to-my-drills fork for everyone; (e) tag vocabularies GLOBAL and
+system-managed (per-team vocab would fragment public search); (f) plain
+signup, join-by-code as a separate repeatable action, optional code field at
+signup that runs the join AFTER account creation; invite codes are per-team
+and admin-regenerable (regenerate = revoke) · **Because:** both debaters
+independently converged on 5 of 6; the one real split (edit rights) resolved
+as A's axis-separation (sharing ≠ co-ownership) satisfying B's orphan concern
+via admin lifecycle rights · **Rejected:** club tier, wiki-style team edits,
+anonymous public reads at launch, per-team vocabularies, signup-coupled join ·
+**Revisit if:** a real multi-team club needs an org tier (additive nullable
+grouping — no migration), or fork-demand shows genuine co-authoring need.
+
+## 2026-07-13 — Reviews stay team-private; only aggregates cross team lines
+**Chose:** raw review rows readable ONLY by the session's team (RLS); every
+other viewer of a drill gets `{avg, count, team_count}` from a SECURITY
+DEFINER function · **Because:** both debaters flagged the same trap — a public
+drill must not broadcast a team's candid internal notes, and an RLS-filtered
+client-side average would silently count only your own team's reviews ·
+**Rejected:** public-drill ⇒ public-reviews coupling, client-side aggregation ·
+**Revisit if:** review volume makes per-team display sparse enough to matter.
+
+## 2026-07-13 — Animation authoring v2: plan-then-play with pass events
+**Chose:** scene schema v3 — per-player run lines traversed at real speeds
+(walk 1.4 / jog 3.0 / run 5.5 / sprint 8.0 m/s), a kickoff ball carrier, and a
+pass-event chain (pop 9 / spin 16 / lofted 11 m/s, release early/mid/late along
+the passer's run); the receiver-lead interception solver ported from Cam's
+Real Rugby game (its one professional-grade mechanic per the reverse-
+engineering report), plus the report's polish list: lofted arc rendering,
+eased catches (no teleports), Chaikin-smoothed drawn paths, no RNG ·
+**Because:** Cam specified this authoring model ("drag a line, pick its speed,
+decide when to pass") and asked for "a more professional version" of Real
+Rugby's passing · **Rejected:** the old drag-recording keyframe model (v2
+scenes — replaced wholesale; none were stored), per-path bezier storage,
+knock-on randomness · **Revisit if:** coaches want per-segment speeds on one
+run (Real Rugby's speed-segment bar) or a draggable release dot instead of
+early/mid/late presets.

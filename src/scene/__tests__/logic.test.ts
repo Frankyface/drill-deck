@@ -55,29 +55,37 @@ describe('immutable scene operations', () => {
     expect(scene.elements[0].position).toEqual({ x: 35, y: 50 });
   });
 
-  test('removeElement also drops the element’s animation tracks', () => {
+  test('removeElement drops the run, truncates the pass chain, clears carrier', () => {
     let scene = addElement(createEmptyScene(), player('p1'));
+    scene = addElement(scene, player('p2'));
+    scene = addElement(scene, player('p3'));
     scene = {
       ...scene,
-      phases: [
+      carrierId: 'p1',
+      runs: [
         {
-          id: 'ph1',
-          durationMs: 2000,
-          tracks: [
-            {
-              elementId: 'p1',
-              keyframes: [
-                { t: 0, position: { x: 35, y: 50 } },
-                { t: 1, position: { x: 40, y: 40 } },
-              ],
-            },
+          elementId: 'p2',
+          points: [
+            { x: 35, y: 50 },
+            { x: 40, y: 40 },
           ],
+          speed: 'run',
         },
       ],
+      passes: [
+        { id: 'a', fromId: 'p1', toId: 'p2', releaseFrac: 0.5, type: 'spin' },
+        { id: 'b', fromId: 'p2', toId: 'p3', releaseFrac: 0.5, type: 'spin' },
+      ],
     };
-    const next = removeElement(scene, 'p1');
-    expect(next.elements).toHaveLength(0);
-    expect(next.phases[0].tracks).toHaveLength(0);
+    const next = removeElement(scene, 'p2');
+    expect(next.elements.map((e) => e.id)).toEqual(['p1', 'p3']);
+    expect(next.runs).toHaveLength(0);
+    // chain truncated from the first pass involving p2 (both of them here)
+    expect(next.passes).toHaveLength(0);
+    expect(next.carrierId).toBe('p1');
+
+    const carrierGone = removeElement(scene, 'p1');
+    expect(carrierGone.carrierId).toBeNull();
   });
 });
 

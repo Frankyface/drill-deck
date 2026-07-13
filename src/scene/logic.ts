@@ -4,7 +4,7 @@ import {
   PITCH_WIDTH_M,
   type Scene,
   type SceneElement,
-  type SceneV2,
+  type SceneV3,
   type Vec2,
 } from './schema';
 
@@ -37,15 +37,15 @@ export function snapToGrid(pos: Vec2, gridM: number = DEFAULT_GRID_M): Vec2 {
   });
 }
 
-export function addElement(scene: SceneV2, element: SceneElement): SceneV2 {
+export function addElement(scene: SceneV3, element: SceneElement): SceneV3 {
   return { ...scene, elements: [...scene.elements, element] };
 }
 
 export function updateElement(
-  scene: SceneV2,
+  scene: SceneV3,
   elementId: string,
   patch: Partial<Omit<SceneElement, 'id' | 'type'>>,
-): SceneV2 {
+): SceneV3 {
   return {
     ...scene,
     elements: scene.elements.map((el) =>
@@ -54,40 +54,45 @@ export function updateElement(
   };
 }
 
-export function moveElement(scene: SceneV2, elementId: string, position: Vec2): SceneV2 {
+export function moveElement(scene: SceneV3, elementId: string, position: Vec2): SceneV3 {
   return updateElement(scene, elementId, { position: clampToPitch(position) });
 }
 
-/** Removing an element also removes any animation tracks that referenced it. */
-export function removeElement(scene: SceneV2, elementId: string): SceneV2 {
+/**
+ * Removing an element also removes its run, and truncates the pass chain from
+ * the first pass that involved it (later passes would have a broken carrier).
+ */
+export function removeElement(scene: SceneV3, elementId: string): SceneV3 {
+  const brokenIndex = scene.passes.findIndex(
+    (p) => p.fromId === elementId || p.toId === elementId,
+  );
   return {
     ...scene,
     elements: scene.elements.filter((el) => el.id !== elementId),
-    phases: scene.phases.map((phase) => ({
-      ...phase,
-      tracks: phase.tracks.filter((tr) => tr.elementId !== elementId),
-    })),
+    runs: scene.runs.filter((run) => run.elementId !== elementId),
+    passes: brokenIndex === -1 ? scene.passes : scene.passes.slice(0, brokenIndex),
+    carrierId: scene.carrierId === elementId ? null : scene.carrierId,
   };
 }
 
-export function setPitch(scene: SceneV2, pitch: SceneV2['pitch']): SceneV2 {
+export function setPitch(scene: SceneV3, pitch: SceneV3['pitch']): SceneV3 {
   return { ...scene, pitch };
 }
 
 // ---- Undo history: immutable snapshots, one per committed action ----
 
 export type SceneHistory = {
-  past: SceneV2[];
-  present: SceneV2;
+  past: SceneV3[];
+  present: SceneV3;
 };
 
 export const HISTORY_LIMIT = 25;
 
-export function createHistory(scene: SceneV2): SceneHistory {
+export function createHistory(scene: SceneV3): SceneHistory {
   return { past: [], present: scene };
 }
 
-export function commit(history: SceneHistory, next: SceneV2): SceneHistory {
+export function commit(history: SceneHistory, next: SceneV3): SceneHistory {
   const past = [...history.past, history.present];
   return {
     past: past.length > HISTORY_LIMIT ? past.slice(past.length - HISTORY_LIMIT) : past,

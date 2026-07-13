@@ -1,49 +1,51 @@
 # help.md — Cam's to-do list
 
-_The app is built. What's left needs your hands, your phone, and your accounts._
+_The platform is built. What's left needs your hands, your phone, and your accounts._
 
-## 1 — Two-minute dashboard jobs (do these first)
+## 1 — Two-minute dashboard job (do this first)
 
 - [ ] **Turn OFF "Confirm email"** in Supabase → Authentication → Sign In / Up
-  → Email. Why: coaches sign in immediately after signup instead of hunting
-  for a confirmation email (free-tier email is also rate-limited to ~2/hour,
-  which will bite on a signup night). The app handles either setting, but OFF
-  is the right call for a club.
+  → Email. Why: coaches sign in immediately after signup (free-tier email is
+  rate-limited to ~2/hour, which will bite on a signup night). The app handles
+  either setting, but OFF is right for rollout.
+- [ ] Optional: set the **Reset Password email template** to include the
+  `{{ .Token }}` 6-digit code (Auth → Email Templates) — the in-app
+  "Forgot password" flow asks for that code.
 
-## 2 — Your device verification pass (the real "verified done" gate)
+## 2 — Your device verification pass
 
-Install **Expo Go** (App Store / Play Store), then in a terminal in the
-project folder run `npx expo start` and scan the QR. Then:
+Install **Expo Go**, run `npx expo start` in the project folder, scan the QR:
 
-- [ ] **Sign up with invite code `RUCK-7H3Q`** — you're the FIRST user, so
-  this account automatically becomes the club **admin**. Use your real email.
-- [ ] Sign-in screen showed "✓ Connected"; airplane mode shows a friendly
-  error instead of a crash.
-- [ ] Add a real drill from your head, fully tagged, and time it (< 2 min).
-- [ ] Filter the library ("12 players", "only cones") — right drills come back.
-- [ ] Open the drill → Draw the diagram: drag players/cones/balls around by
-  finger, draw a run arrow, save, reopen — identical.
-- [ ] Add a step, drag a player along a run to record it, press ▶ Play —
-  the drill animates smoothly.
-- [ ] Join a team (Club tab), build a session with timings, try Run mode.
-- [ ] Review the session (stars + note) and see it appear on the drill page.
-- [ ] Kill and reopen the app — still signed in.
+- [ ] **Sign up with just email + password** (no code — clubs are gone, anyone
+  can join). Check "Forgot password?" sends you a code that works.
+- [ ] **Teams tab:** create a team (you become its admin), see its invite
+  code, regenerate it, edit your display name.
+- [ ] **Add a drill**, set visibility 👥 My teams + pick your team; add another
+  as 🔒 Private and one as 🌍 Public. Check the library scope chips
+  (All / Mine / Team shared / Public) slice them correctly.
+- [ ] **Animate a drill** (the new flow): open its diagram → place attackers/
+  defenders → 🎬 Animate → drag a line from each runner → pick speeds
+  (walk/jog/run/sprint) → tap a player → 🏉 Give ball → ＋ Pass → tap the
+  receiver → ▶ Play. The pass should lead the runner — ball arrives in stride.
+  Try a "lofted" pass (it arcs) and an "early/late" release.
+- [ ] **Second phone / a mate:** sign up, join your team with the code,
+  confirm they see the team drill but NOT your private one, and can
+  📋 Copy-to-my-drills your public one.
+- [ ] Build a session, run it, review it — check the drill's star rating shows
+  while the review text stays team-only.
 
 Anything that fails: tell the next Claude session; it fixes and re-verifies.
 
 ## 3 — Coach rollout (after your pass)
 
-- [ ] Share the invite code with your coaches (they sign up in-app).
-- [ ] Decide team names: currently seeded 1st XV, 2nd XV, U16s — rename/add
-  in the Club tab (you're admin).
-- [ ] **iOS installs:** Expo Go works free for everyone. For a proper
-  standalone app on iPhones you'll need the Apple Developer Program ($99/yr,
-  https://developer.apple.com/programs/) — Expo Premium covers the builds,
-  not Apple's fee. Android: free APK via EAS internal distribution.
+- [ ] Share your team invite code with your coaches (they self-serve signup).
+- [ ] **iOS installs:** Expo Go works free. A standalone iPhone app needs the
+  Apple Developer Program ($99/yr) — Expo Premium covers builds, not Apple's
+  fee. Android: free APK via EAS internal distribution.
 
 ## Not blocking anything
 
 - [ ] Google Play Console ($25 one-off) — only for a Play Store listing.
-- [x] ~~Supabase project creation~~ — done (project "Drill Deck", Canada region).
-- [x] ~~gh CLI~~ — installed at C:\Program Files\GitHub CLI (not on PATH in
-  Claude's shells; plain git works fine).
+- [x] ~~Supabase project~~ — live ("Drill Deck", Canada region), 8 migrations.
+- [x] ~~gh CLI~~ — installed at C:\Program Files\GitHub CLI (not on Claude's
+  shells' PATH; plain git works).

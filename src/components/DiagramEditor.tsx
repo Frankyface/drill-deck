@@ -15,44 +15,67 @@ import {
   removeElement,
   scaleForCanvas,
   setPitch,
+  undo,
   type SceneHistory,
 } from '../scene/logic';
-import { samplesToKeyframes, simplifyPath } from '../scene/playback';
+import { pathLength, simplifyPath, smoothPath } from '../scene/playback';
 import {
+  PASS_TYPE_ORDER,
   PITCH_BACKGROUNDS,
-  type Phase,
+  RUN_SPEED_ORDER,
+  type PlayerElement,
+  type Run,
   type SceneElement,
-  type SceneV2,
+  type SceneV3,
   type Team,
   type Vec2,
 } from '../scene/schema';
 import { Button, Chip, ChipRow, Muted, SectionLabel } from '../ui/core';
-import { Stepper } from '../ui/pickers';
-import { colors, radius, spacing } from '../ui/theme';
+import { colors, font, radius, spacing } from '../ui/theme';
 import { canvasHeightFor } from './DiagramCanvas';
 import { DraggableToken, type EditorMode } from './DraggableToken';
 import { PlaybackView } from './PlaybackView';
 import { SvgPitch } from './SvgPitch';
 import { TOKEN_SIZE } from './TokenView';
 
-const PHASE_STEP_MS = 500;
+const PLAYER_HIT_RADIUS_M = 4;
+const MIN_RUN_LENGTH_M = 2;
+const RELEASE_STEPS = [0.25, 0.5, 0.75];
 
-function nextPlayerLabel(scene: SceneV2, team: Team): string {
-  const count = scene.elements.filter(
-    (el) => el.type === 'player' && el.team === team,
-  ).length;
+const TEAM_RUN_COLORS: Record<Team, string> = {
+  attack: '#fca5a5',
+  defence: '#93c5fd',
+  neutral: '#cbd5e1',
+};
+
+function nextPlayerLabel(scene: SceneV3, team: Team): string {
+  const count = scene.elements.filter((el) => el.type === 'player' && el.team === team).length;
   return String(count + 1);
 }
 
-let phaseCounter = 0;
-function newPhase(existingCount: number): Phase {
-  phaseCounter += 1;
-  return {
-    id: `phase-${Date.now().toString(36)}-${phaseCounter}`,
-    name: `Step ${existingCount + 1}`,
-    durationMs: 3000,
-    tracks: [],
-  };
+function playerAt(scene: SceneV3, meters: Vec2): PlayerElement | null {
+  let best: PlayerElement | null = null;
+  let bestDist = PLAYER_HIT_RADIUS_M;
+  for (const el of scene.elements) {
+    if (el.type !== 'player') continue;
+    const dist = Math.hypot(el.position.x - meters.x, el.position.y - meters.y);
+    if (dist <= bestDist) {
+      best = el;
+      bestDist = dist;
+    }
+  }
+  return best;
+}
+
+/** Who holds the ball at the END of the current pass chain. */
+function chainEndCarrier(scene: SceneV3): string | null {
+  if (scene.passes.length > 0) return scene.passes[scene.passes.length - 1].toId;
+  return scene.carrierId;
+}
+
+function playerLabel(scene: SceneV3, id: string): string {
+  const el = scene.elements.find((e) => e.id === id);
+  return el && el.type === 'player' && el.label ? `#${el.label}` : '•';
 }
 
 export function DiagramEditor({
@@ -60,32 +83,31 @@ export function DiagramEditor({
   onSave,
   isSaving,
 }: {
-  initialScene: SceneV2;
-  onSave: (scene: SceneV2) => void;
+  initialScene: SceneV3;
+  onSave: (scene: SceneV3) => void;
   isSaving: boolean;
 }) {
   const [history, setHistory] = useState<SceneHistory>(() => createHistory(initialScene));
   const [mode, setMode] = useState<EditorMode>('move');
   const [isPlayMode, setIsPlayMode] = useState(false);
-  const [activePhaseId, setActivePhaseId] = useState<string | null>(null);
-  const [arrowPreview, setArrowPreview] = useState<Vec2[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [isPickingReceiver, setIsPickingReceiver] = useState(false);
+  const [drawPreview, setDrawPreview] = useState<Vec2[]>([]);
 
-  // Deterministic width (no onLayout race): screen minus Screen padding, capped.
   const { width: windowWidth } = useWindowDimensions();
   const canvasWidth = Math.max(200, Math.min(windowWidth - 32, 560));
-
-  const scene = history.present;
   const scale = scaleForCanvas(canvasWidth);
+  const heightPx = canvasHeightFor(canvasWidth);
   const tokenSize = Math.max(20, Math.min(TOKEN_SIZE + 6, canvasWidth / 11));
 
-  // Buffers for gesture-recorded data (JS side)
-  const arrowSamples = useRef<Vec2[]>([]);
-  const recordSamples = useRef<{ position: Vec2; atMs: number }[]>([]);
+  const scene = history.present;
+  const drawSamples = useRef<Vec2[]>([]);
+  const drawTarget = useRef<string | null>(null);
 
-  const apply = (next: SceneV2) => setHistory((h) => commit(h, next));
+  const apply = (next: SceneV3) => setHistory((h) => commit(h, next));
 
-  // ---- palette actions ----
-  const addPlayer = (team: Team) => {
+  // ---- palette ----
+  const addPlayer = (team: Team) =>
     apply(
       addElement(scene, {
         id: newElementId(),
@@ -95,66 +117,133 @@ export function DiagramEditor({
         position: { x: 35, y: 50 },
       }),
     );
-  };
-
   const addCone = () =>
     apply(addElement(scene, { id: newElementId(), type: 'cone', position: { x: 35, y: 46 } }));
-
-  const addBall = () =>
-    apply(addElement(scene, { id: newElementId(), type: 'ball', position: { x: 35, y: 54 } }));
-
   const cyclePitch = () => {
     const idx = PITCH_BACKGROUNDS.indexOf(scene.pitch);
     apply(setPitch(scene, PITCH_BACKGROUNDS[(idx + 1) % PITCH_BACKGROUNDS.length]));
   };
 
-  // ---- token callbacks ----
-  const handleCommitMove = (elementId: string, meters: Vec2) =>
-    apply(moveElement(scene, elementId, meters));
+  // ---- animate-mode helpers ----
+  const selectedRun = scene.runs.find((r) => r.elementId === selectedId);
+  const carrierAtEnd = chainEndCarrier(scene);
 
-  const handleDelete = (elementId: string) => apply(removeElement(scene, elementId));
-
-  const handleRecordSample = (_elementId: string, meters: Vec2) => {
-    recordSamples.current.push({ position: meters, atMs: Date.now() });
+  const handleAnimateTap = (meters: Vec2) => {
+    const player = playerAt(scene, meters);
+    if (!player) {
+      setSelectedId(null);
+      setIsPickingReceiver(false);
+      return;
+    }
+    if (isPickingReceiver && carrierAtEnd && player.id !== carrierAtEnd) {
+      apply({
+        ...scene,
+        passes: [
+          ...scene.passes,
+          {
+            id: newElementId(),
+            fromId: carrierAtEnd,
+            toId: player.id,
+            releaseFrac: 0.5,
+            type: 'spin',
+          },
+        ],
+      });
+      setIsPickingReceiver(false);
+      return;
+    }
+    setSelectedId(player.id);
   };
 
-  const handleRecordEnd = (elementId: string) => {
-    const samples = recordSamples.current;
-    recordSamples.current = [];
-    if (!activePhaseId || samples.length < 3) return;
-    const keyframes = samplesToKeyframes(samples);
-    if (keyframes.length < 2) return;
+  const startDraw = (meters: Vec2) => {
+    const player = playerAt(scene, meters);
+    drawTarget.current = player?.id ?? null;
+    drawSamples.current = player ? [player.position] : [];
+    if (player) setSelectedId(player.id);
+  };
+
+  const pushDrawSample = (meters: Vec2) => {
+    if (!drawTarget.current) return;
+    drawSamples.current.push(meters);
+    if (drawSamples.current.length % 3 === 0) setDrawPreview([...drawSamples.current]);
+  };
+
+  const finishDraw = () => {
+    const target = drawTarget.current;
+    const raw = drawSamples.current;
+    drawTarget.current = null;
+    drawSamples.current = [];
+    setDrawPreview([]);
+    if (!target || raw.length < 2) return;
+    const points = smoothPath(simplifyPath(raw, 0.9), 1);
+    if (points.length < 2 || pathLength(points) < MIN_RUN_LENGTH_M) return;
+    const run: Run = { elementId: target, points, speed: 'run' };
     apply({
       ...scene,
-      phases: scene.phases.map((phase) =>
-        phase.id === activePhaseId
-          ? {
-              ...phase,
-              tracks: [
-                ...phase.tracks.filter((tr) => tr.elementId !== elementId),
-                { elementId, keyframes },
-              ],
-            }
-          : phase,
+      runs: [...scene.runs.filter((r) => r.elementId !== target), run],
+    });
+    setSelectedId(target);
+  };
+
+  const setRunSpeed = (speed: Run['speed']) => {
+    if (!selectedId) return;
+    apply({
+      ...scene,
+      runs: scene.runs.map((r) => (r.elementId === selectedId ? { ...r, speed } : r)),
+    });
+  };
+
+  const removeRun = () => {
+    if (!selectedId) return;
+    apply({ ...scene, runs: scene.runs.filter((r) => r.elementId !== selectedId) });
+  };
+
+  const giveBall = () => {
+    if (!selectedId) return;
+    // changing the kickoff carrier invalidates the pass chain
+    apply({ ...scene, carrierId: selectedId, passes: [] });
+  };
+
+  const cyclePassType = (passId: string) => {
+    apply({
+      ...scene,
+      passes: scene.passes.map((p) =>
+        p.id === passId
+          ? { ...p, type: PASS_TYPE_ORDER[(PASS_TYPE_ORDER.indexOf(p.type) + 1) % PASS_TYPE_ORDER.length] }
+          : p,
       ),
     });
   };
 
-  // ---- arrow drawing (pan over the whole canvas while in an arrow mode) ----
-  const isArrowMode = mode === 'arrow-run' || mode === 'arrow-pass';
+  const cycleRelease = (passId: string) => {
+    apply({
+      ...scene,
+      passes: scene.passes.map((p) => {
+        if (p.id !== passId) return p;
+        const idx = RELEASE_STEPS.indexOf(p.releaseFrac);
+        return { ...p, releaseFrac: RELEASE_STEPS[(idx + 1) % RELEASE_STEPS.length] };
+      }),
+    });
+  };
 
+  const deletePassFrom = (index: number) => {
+    apply({ ...scene, passes: scene.passes.slice(0, index) });
+  };
+
+  // ---- canvas gestures (arrow drawing + animate mode) ----
+  const isArrowMode = mode === 'arrow-run' || mode === 'arrow-pass';
+  const isAnimateMode = mode === 'animate';
+
+  const arrowSamples = useRef<Vec2[]>([]);
   const pushArrowSample = (pxX: number, pxY: number) => {
     const m = pxToMeters({ x: pxX, y: pxY }, scale);
     arrowSamples.current.push(m);
-    if (arrowSamples.current.length % 3 === 0) {
-      setArrowPreview([...arrowSamples.current]);
-    }
+    if (arrowSamples.current.length % 3 === 0) setDrawPreview([...arrowSamples.current]);
   };
-
   const finishArrow = () => {
     const raw = arrowSamples.current;
     arrowSamples.current = [];
-    setArrowPreview([]);
+    setDrawPreview([]);
     if (raw.length < 2) return;
     const points = simplifyPath(raw, 1.2);
     if (points.length < 2) return;
@@ -170,39 +259,38 @@ export function DiagramEditor({
     setMode('move');
   };
 
-  const arrowGesture = Gesture.Pan()
-    .enabled(isArrowMode)
+  const canvasPan = Gesture.Pan()
+    .enabled(isArrowMode || isAnimateMode)
     .onStart((e) => {
-      runOnJS(pushArrowSample)(e.x, e.y);
+      if (isAnimateMode) {
+        runOnJS(startDraw)(pxToMeters({ x: e.x, y: e.y }, scale));
+      } else {
+        runOnJS(pushArrowSample)(e.x, e.y);
+      }
     })
     .onUpdate((e) => {
-      runOnJS(pushArrowSample)(e.x, e.y);
+      if (isAnimateMode) {
+        runOnJS(pushDrawSample)(pxToMeters({ x: e.x, y: e.y }, scale));
+      } else {
+        runOnJS(pushArrowSample)(e.x, e.y);
+      }
     })
     .onEnd(() => {
-      runOnJS(finishArrow)();
+      if (isAnimateMode) {
+        runOnJS(finishDraw)();
+      } else {
+        runOnJS(finishArrow)();
+      }
     });
 
-  // ---- phases ----
-  const addPhase = () => {
-    const phase = newPhase(scene.phases.length);
-    apply({ ...scene, phases: [...scene.phases, phase] });
-    setActivePhaseId(phase.id);
-    setMode('record');
-  };
-
-  const updatePhaseDuration = (phaseId: string, durationMs: number) => {
-    apply({
-      ...scene,
-      phases: scene.phases.map((p) => (p.id === phaseId ? { ...p, durationMs } : p)),
+  const canvasTap = Gesture.Tap()
+    .enabled(isAnimateMode)
+    .onEnd((e) => {
+      runOnJS(handleAnimateTap)(pxToMeters({ x: e.x, y: e.y }, scale));
     });
-  };
 
-  const deletePhase = (phaseId: string) => {
-    apply({ ...scene, phases: scene.phases.filter((p) => p.id !== phaseId) });
-    if (activePhaseId === phaseId) setActivePhaseId(null);
-  };
+  const canvasGesture = Gesture.Exclusive(canvasPan, canvasTap);
 
-  const heightPx = canvasHeightFor(canvasWidth);
   const arrows = scene.elements.filter((el) => el.type === 'arrow');
   const tokens = scene.elements.filter((el) => el.type !== 'arrow');
 
@@ -228,9 +316,17 @@ export function DiagramEditor({
         <Chip label="+ Defender" onPress={() => addPlayer('defence')} testID="add-defender" />
         <Chip label="+ Neutral" onPress={() => addPlayer('neutral')} testID="add-neutral" />
         <Chip label="+ Cone" onPress={addCone} testID="add-cone" />
-        <Chip label="+ Ball" onPress={addBall} testID="add-ball" />
       </ChipRow>
       <ChipRow>
+        <Chip
+          label="🎬 Animate"
+          selected={isAnimateMode}
+          onPress={() => {
+            setMode(isAnimateMode ? 'move' : 'animate');
+            setIsPickingReceiver(false);
+          }}
+          testID="mode-animate"
+        />
         <Chip
           label="Run arrow"
           selected={mode === 'arrow-run'}
@@ -246,27 +342,32 @@ export function DiagramEditor({
         <Chip label={`Pitch: ${scene.pitch}`} onPress={cyclePitch} testID="cycle-pitch" />
         <Chip
           label="Undo"
-          onPress={() => setHistory((h) => (canUndo(h) ? { past: h.past.slice(0, -1), present: h.past[h.past.length - 1] } : h))}
+          onPress={() => setHistory((h) => (canUndo(h) ? undo(h) : h))}
           testID="undo"
         />
       </ChipRow>
 
-      {isArrowMode ? (
+      {isAnimateMode ? (
+        <Muted>
+          {isPickingReceiver
+            ? 'Tap the player who catches the pass.'
+            : 'Drag FROM a player to draw their run. Tap a player to select them.'}
+        </Muted>
+      ) : isArrowMode ? (
         <Muted>Drag on the pitch to draw the arrow (release to place it).</Muted>
-      ) : mode === 'record' ? (
-        <Muted>Recording: drag a piece along its run — it snaps back when you let go.</Muted>
       ) : (
-        <Muted>Drag pieces to move them. Long-press a piece to delete it.</Muted>
+        <Muted>Drag pieces to place them. Long-press a piece to delete it.</Muted>
       )}
 
       {/* canvas */}
       <View style={styles.canvasWrap} testID="editor-canvas">
-        {(
-          <GestureDetector gesture={arrowGesture}>
-            <Animated.View style={{ width: canvasWidth, height: heightPx }}>
-              <SvgPitch pitch={scene.pitch} widthPx={canvasWidth} />
-              <Svg width={canvasWidth} height={heightPx} style={StyleSheet.absoluteFill}>
-                {arrows.map((arrow) => (
+        <GestureDetector gesture={canvasGesture}>
+          <Animated.View style={{ width: canvasWidth, height: heightPx }}>
+            <SvgPitch pitch={scene.pitch} widthPx={canvasWidth} />
+            <Svg width={canvasWidth} height={heightPx} style={StyleSheet.absoluteFill}>
+              {/* static annotation arrows */}
+              {arrows.map((arrow) =>
+                arrow.type === 'arrow' ? (
                   <Polyline
                     key={arrow.id}
                     points={arrow.points.map((p) => `${p.x * scale},${p.y * scale}`).join(' ')}
@@ -276,98 +377,166 @@ export function DiagramEditor({
                     strokeDasharray={arrow.style === 'pass' ? '7 6' : undefined}
                     strokeLinecap="round"
                   />
-                ))}
-                {arrowPreview.length >= 2 && (
+                ) : null,
+              )}
+              {/* run lines */}
+              {scene.runs.map((run) => {
+                const owner = scene.elements.find((e) => e.id === run.elementId);
+                const team: Team = owner?.type === 'player' ? owner.team : 'neutral';
+                const isSelected = run.elementId === selectedId;
+                return (
                   <Polyline
-                    points={arrowPreview.map((p) => `${p.x * scale},${p.y * scale}`).join(' ')}
+                    key={`run-${run.elementId}`}
+                    points={run.points.map((p) => `${p.x * scale},${p.y * scale}`).join(' ')}
                     fill="none"
-                    stroke="#fde68a"
-                    strokeWidth={2}
-                    strokeDasharray="4 4"
+                    stroke={TEAM_RUN_COLORS[team]}
+                    strokeWidth={isSelected ? 4 : 2.5}
+                    strokeDasharray="2 6"
+                    strokeLinecap="round"
                   />
-                )}
-              </Svg>
-              {tokens.map((el: SceneElement) => (
-                <DraggableToken
-                  key={el.id}
-                  element={el}
-                  scale={scale}
-                  size={tokenSize}
-                  mode={mode}
-                  onCommitMove={handleCommitMove}
-                  onDelete={handleDelete}
-                  onRecordSample={handleRecordSample}
-                  onRecordEnd={handleRecordEnd}
+                );
+              })}
+              {drawPreview.length >= 2 && (
+                <Polyline
+                  points={drawPreview.map((p) => `${p.x * scale},${p.y * scale}`).join(' ')}
+                  fill="none"
+                  stroke="#fde68a"
+                  strokeWidth={2}
+                  strokeDasharray="4 4"
                 />
-              ))}
-            </Animated.View>
-          </GestureDetector>
-        )}
+              )}
+            </Svg>
+            {tokens.map((el: SceneElement) => (
+              <DraggableToken
+                key={el.id}
+                element={el}
+                scale={scale}
+                size={tokenSize}
+                mode={mode}
+                selected={el.id === selectedId}
+                onCommitMove={(id, m) => apply(moveElement(scene, id, m))}
+                onDelete={(id) => apply(removeElement(scene, id))}
+              />
+            ))}
+            {/* ball marker on the kickoff carrier */}
+            {scene.carrierId &&
+              (() => {
+                const carrier = scene.elements.find((e) => e.id === scene.carrierId);
+                if (!carrier) return null;
+                return (
+                  <View
+                    pointerEvents="none"
+                    style={{
+                      position: 'absolute',
+                      left: carrier.position.x * scale + tokenSize * 0.25,
+                      top: carrier.position.y * scale - tokenSize * 0.7,
+                    }}
+                  >
+                    <Text style={{ fontSize: tokenSize * 0.55 }}>🏉</Text>
+                  </View>
+                );
+              })()}
+          </Animated.View>
+        </GestureDetector>
       </View>
 
-      {/* arrows list for deletion (long-press can't hit SVG lines reliably) */}
+      {/* arrows list for deletion */}
       {arrows.length > 0 && (
         <ChipRow>
           {arrows.map((arrow, idx) => (
             <Chip
               key={arrow.id}
-              label={`✕ ${arrow.style} arrow ${idx + 1}`}
-              onPress={() => handleDelete(arrow.id)}
+              label={`✕ ${arrow.type === 'arrow' ? arrow.style : ''} arrow ${idx + 1}`}
+              onPress={() => apply(removeElement(scene, arrow.id))}
               testID={`delete-arrow-${idx}`}
             />
           ))}
         </ChipRow>
       )}
 
-      {/* animation phases */}
-      <SectionLabel>Animation</SectionLabel>
-      {scene.phases.length === 0 && (
-        <Muted>Add a step, then drag pieces to record their runs. Play shows the drill in motion.</Muted>
+      {/* animate-mode controls */}
+      {isAnimateMode && (
+        <>
+          <SectionLabel>Animation</SectionLabel>
+          {selectedId ? (
+            <>
+              <Muted>Selected: {playerLabel(scene, selectedId)}</Muted>
+              <ChipRow>
+                <Chip
+                  label={scene.carrierId === selectedId ? '🏉 Has ball' : '🏉 Give ball'}
+                  selected={scene.carrierId === selectedId}
+                  onPress={giveBall}
+                  testID="give-ball"
+                />
+                {selectedRun && <Chip label="✕ Remove run" onPress={removeRun} testID="remove-run" />}
+              </ChipRow>
+              {selectedRun && (
+                <ChipRow>
+                  {RUN_SPEED_ORDER.map((speed) => (
+                    <Chip
+                      key={speed}
+                      label={speed}
+                      selected={selectedRun.speed === speed}
+                      onPress={() => setRunSpeed(speed)}
+                      testID={`speed-${speed}`}
+                    />
+                  ))}
+                </ChipRow>
+              )}
+            </>
+          ) : (
+            <Muted>No player selected.</Muted>
+          )}
+
+          <ChipRow>
+            <Chip
+              label={isPickingReceiver ? 'Tap the receiver…' : '＋ Pass'}
+              selected={isPickingReceiver}
+              onPress={() => {
+                if (!carrierAtEnd) return;
+                setIsPickingReceiver(!isPickingReceiver);
+              }}
+              testID="add-pass"
+            />
+            {!scene.carrierId && <Muted>Give someone the ball first.</Muted>}
+          </ChipRow>
+
+          {scene.passes.map((pass, idx) => (
+            <View key={pass.id} style={styles.passRow} testID={`pass-row-${idx}`}>
+              <Text style={styles.passLabel}>
+                {idx + 1}. {playerLabel(scene, pass.fromId)} → {playerLabel(scene, pass.toId)}
+              </Text>
+              <Pressable onPress={() => cyclePassType(pass.id)} style={styles.passChip}>
+                <Text style={styles.passChipText}>{pass.type}</Text>
+              </Pressable>
+              <Pressable onPress={() => cycleRelease(pass.id)} style={styles.passChip}>
+                <Text style={styles.passChipText}>
+                  {pass.releaseFrac === 0.25 ? 'early' : pass.releaseFrac === 0.75 ? 'late' : 'mid'}
+                </Text>
+              </Pressable>
+              <Pressable onPress={() => deletePassFrom(idx)} hitSlop={8}>
+                <Text style={styles.deletePass}>✕</Text>
+              </Pressable>
+            </View>
+          ))}
+        </>
       )}
-      {scene.phases.map((phase) => (
-        <View key={phase.id} style={styles.phaseRow}>
-          <Pressable
-            onPress={() => {
-              setActivePhaseId(phase.id);
-              setMode('record');
-            }}
-            style={[styles.phaseName, activePhaseId === phase.id && mode === 'record' && styles.phaseActive]}
-            testID={`phase-${phase.name}`}
-          >
-            <Text style={styles.phaseNameText}>
-              {phase.name} · {phase.tracks.length} run{phase.tracks.length === 1 ? '' : 's'}
-            </Text>
-          </Pressable>
-          <Stepper
-            label=""
-            value={phase.durationMs / 1000}
-            min={0.5}
-            max={30}
-            step={PHASE_STEP_MS / 1000}
-            onChange={(sec) => updatePhaseDuration(phase.id, Math.round(sec * 1000))}
-          />
-          <Pressable onPress={() => deletePhase(phase.id)} hitSlop={8}>
-            <Text style={styles.deletePhase}>✕</Text>
-          </Pressable>
-        </View>
-      ))}
+
       <View style={styles.actionRow}>
-        <Button label="+ Add step" variant="secondary" onPress={addPhase} testID="add-phase" />
         <Button
           label="▶ Play"
           variant="secondary"
           onPress={() => setIsPlayMode(true)}
-          disabled={scene.phases.length === 0}
+          disabled={scene.runs.length === 0 && scene.passes.length === 0}
           testID="enter-play-mode"
         />
+        <Button
+          label={isSaving ? 'Saving…' : 'Save diagram'}
+          onPress={() => onSave(scene)}
+          loading={isSaving}
+          testID="save-diagram"
+        />
       </View>
-
-      <Button
-        label={isSaving ? 'Saving…' : 'Save diagram'}
-        onPress={() => onSave(scene)}
-        loading={isSaving}
-        testID="save-diagram"
-      />
     </View>
   );
 }
@@ -378,21 +547,20 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     overflow: 'hidden',
   },
-  phaseRow: {
+  passRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
     marginBottom: spacing.xs,
   },
-  phaseName: {
-    flex: 1,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.md,
+  passLabel: { flex: 1, fontWeight: '600', color: colors.text, fontSize: font.sm },
+  passChip: {
     backgroundColor: colors.chipBg,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 4,
   },
-  phaseActive: { backgroundColor: colors.chipSelectedBg },
-  phaseNameText: { fontWeight: '600', color: colors.text },
-  deletePhase: { color: colors.danger, fontSize: 18, fontWeight: '700', padding: spacing.sm },
-  actionRow: { flexDirection: 'row', gap: spacing.md },
+  passChipText: { fontSize: font.xs, fontWeight: '700', color: colors.text },
+  deletePass: { color: colors.danger, fontSize: 18, fontWeight: '700', padding: spacing.sm },
+  actionRow: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.md },
 });
