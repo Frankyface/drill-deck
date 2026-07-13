@@ -42,18 +42,19 @@ export function useCreateProgressionGroup() {
   return useMutation({
     mutationFn: async ({
       name,
-      clubId,
       userId,
       drillIds,
+      teamId = null,
     }: {
       name: string;
-      clubId: string;
       userId: string;
       drillIds: string[];
+      /** null = private to the creator; set = visible to that team. */
+      teamId?: string | null;
     }) => {
       const { data, error } = await supabase
         .from('progression_groups')
-        .insert({ name: name.trim(), club_id: clubId, created_by: userId })
+        .insert({ name: name.trim(), created_by: userId, team_id: teamId })
         .select('id')
         .single();
       if (error) throw new Error(`Could not create progression: ${error.message}`);

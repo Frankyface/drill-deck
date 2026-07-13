@@ -3,7 +3,11 @@
 // offline from the query cache, and is trivially unit-testable.
 import type { DrillListItem } from './drills';
 
+export type DrillScope = 'all' | 'mine' | 'teams' | 'public';
+
 export type DrillFilters = {
+  /** Whose drills: everything visible / my own / shared to my teams / public. */
+  scope: DrillScope;
   search: string;
   categoryId: string | null;
   skillFocusIds: string[];
@@ -18,6 +22,7 @@ export type DrillFilters = {
 };
 
 export const EMPTY_FILTERS: DrillFilters = {
+  scope: 'all',
   search: '',
   categoryId: null,
   skillFocusIds: [],
@@ -31,6 +36,7 @@ export const EMPTY_FILTERS: DrillFilters = {
 
 export function countActiveFilters(f: DrillFilters): number {
   let count = 0;
+  if (f.scope !== 'all') count += 1;
   if (f.categoryId) count += 1;
   if (f.skillFocusIds.length > 0) count += 1;
   if (f.equipmentIds.length > 0) count += 1;
@@ -42,11 +48,21 @@ export function countActiveFilters(f: DrillFilters): number {
   return count;
 }
 
-export function filterDrills(drills: DrillListItem[], f: DrillFilters): DrillListItem[] {
+export function filterDrills(
+  drills: DrillListItem[],
+  f: DrillFilters,
+  myUserId?: string,
+): DrillListItem[] {
   const needle = f.search.trim().toLowerCase();
   return drills.filter((drill) => {
     if (!f.showArchived && drill.archived_at !== null) return false;
     if (f.showArchived && drill.archived_at === null) return false;
+
+    if (f.scope === 'mine' && drill.created_by !== myUserId) return false;
+    if (f.scope === 'teams' && !(drill.visibility === 'team' && drill.created_by !== myUserId))
+      return false;
+    if (f.scope === 'public' && !(drill.visibility === 'public' && drill.created_by !== myUserId))
+      return false;
 
     if (needle) {
       const haystack = `${drill.name} ${drill.description}`.toLowerCase();

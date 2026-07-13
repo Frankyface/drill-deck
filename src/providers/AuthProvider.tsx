@@ -12,15 +12,12 @@ import { queryClient } from '../lib/queryClient';
 import { supabase } from '../lib/supabase';
 import type { Tables } from '../types/database.types';
 
-export type Profile = Tables<'profiles'> & {
-  clubs: Pick<Tables<'clubs'>, 'id' | 'name' | 'invite_code'> | null;
-};
+export type Profile = Tables<'profiles'>;
 
 type AuthContextValue = {
   session: Session | null;
   profile: Profile | null;
   isLoading: boolean;
-  isAdmin: boolean;
   refreshProfile: () => Promise<void>;
   signOut: () => Promise<void>;
 };
@@ -29,7 +26,6 @@ const AuthContext = createContext<AuthContextValue>({
   session: null,
   profile: null,
   isLoading: true,
-  isAdmin: false,
   refreshProfile: async () => {},
   signOut: async () => {},
 });
@@ -37,14 +33,14 @@ const AuthContext = createContext<AuthContextValue>({
 async function fetchProfile(userId: string): Promise<Profile | null> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('*, clubs(id, name, invite_code)')
+    .select('*')
     .eq('id', userId)
     .maybeSingle();
   if (error) {
     if (__DEV__) console.warn('Failed to load profile:', error.message);
     return null;
   }
-  return data as Profile | null;
+  return data;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -96,16 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider
-      value={{
-        session,
-        profile,
-        isLoading,
-        isAdmin: profile?.role === 'admin',
-        refreshProfile,
-        signOut,
-      }}
-    >
+    <AuthContext.Provider value={{ session, profile, isLoading, refreshProfile, signOut }}>
       {children}
     </AuthContext.Provider>
   );

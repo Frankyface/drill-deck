@@ -42,6 +42,8 @@ export default function EditDrillScreen() {
     durationMinutes: drill.duration_minutes,
     skillFocusIds: drill.skill_focus_ids,
     equipmentIds: drill.equipment_ids,
+    visibility: drill.visibility as DrillInput['visibility'],
+    sharedTeamIds: drill.shared_team_ids,
   };
 
   const isArchived = drill.archived_at !== null;

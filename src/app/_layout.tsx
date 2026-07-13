@@ -12,7 +12,8 @@ function AuthGate({ children }: { children: ReactNode }) {
   const segments = useSegments();
   const router = useRouter();
 
-  const inAuthScreens = segments[0] === 'sign-in' || segments[0] === 'sign-up';
+  const inAuthScreens =
+    segments[0] === 'sign-in' || segments[0] === 'sign-up' || segments[0] === 'reset-password';
 
   useEffect(() => {
     if (isLoading) return;
@@ -44,6 +45,7 @@ export default function RootLayout() {
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen name="sign-in" options={{ headerShown: false }} />
               <Stack.Screen name="sign-up" options={{ headerShown: false }} />
+              <Stack.Screen name="reset-password" options={{ headerShown: false }} />
               <Stack.Screen name="drill/new" options={{ title: 'New drill' }} />
               <Stack.Screen name="drill/[id]/index" options={{ title: 'Drill' }} />
               <Stack.Screen name="drill/[id]/edit" options={{ title: 'Edit drill' }} />

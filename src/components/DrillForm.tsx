@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { View } from 'react-native';
 
 import { INTENSITY_OPTIONS, LEVEL_OPTIONS, SPACE_OPTIONS } from '../features/constants';
-import { validateDrillInput, type DrillInput } from '../features/drills';
+import { validateDrillInput, type DrillInput, type DrillVisibility } from '../features/drills';
 import { useCategories, useEquipmentTypes, useSkillFocuses } from '../features/lookups';
-import { Button, ChipRow, Chip, ErrorText, SectionLabel, TextField } from '../ui/core';
+import { useMyTeams } from '../features/teams';
+import { useAuth } from '../providers/AuthProvider';
+import { Button, ChipRow, Chip, ErrorText, Muted, SectionLabel, TextField } from '../ui/core';
 import { ChipMultiSelect, ChipSelect, Stepper } from '../ui/pickers';
 
 export const EMPTY_DRILL_INPUT: DrillInput = {
@@ -21,6 +23,20 @@ export const EMPTY_DRILL_INPUT: DrillInput = {
   durationMinutes: 10,
   skillFocusIds: [],
   equipmentIds: [],
+  visibility: 'private',
+  sharedTeamIds: [],
+};
+
+const VISIBILITY_OPTIONS: DrillVisibility[] = ['private', 'team', 'public'];
+const VISIBILITY_LABELS: Record<DrillVisibility, string> = {
+  private: '🔒 Private',
+  team: '👥 My teams',
+  public: '🌍 Public',
+};
+const VISIBILITY_HINTS: Record<DrillVisibility, string> = {
+  private: 'Only you can see this drill.',
+  team: 'Coaches on the teams you pick can see and use it.',
+  public: 'Every coach on Drill Deck can see and copy it.',
 };
 
 /**
@@ -43,9 +59,11 @@ export function DrillForm({
   const [input, setInput] = useState<DrillInput>(initial);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  const { profile } = useAuth();
   const categories = useCategories();
   const skills = useSkillFocuses();
   const equipment = useEquipmentTypes();
+  const myTeams = useMyTeams(profile?.id);
 
   const set = <K extends keyof DrillInput>(key: K, value: DrillInput[K]) =>
     setInput((prev) => ({ ...prev, [key]: value }));
@@ -174,6 +192,35 @@ export function DrillForm({
         placeholder="Hands up early, run straight, communicate…"
         multiline
       />
+
+      <SectionLabel>Who can see this drill?</SectionLabel>
+      <ChipRow>
+        {VISIBILITY_OPTIONS.map((vis) => (
+          <Chip
+            key={vis}
+            label={VISIBILITY_LABELS[vis]}
+            selected={input.visibility === vis}
+            onPress={() => set('visibility', vis)}
+            testID={`visibility-${vis}`}
+          />
+        ))}
+      </ChipRow>
+      <Muted>{VISIBILITY_HINTS[input.visibility]}</Muted>
+      {input.visibility === 'team' && (
+        <>
+          <SectionLabel>Share with which teams?</SectionLabel>
+          {(myTeams.data ?? []).length === 0 ? (
+            <Muted>You&apos;re not on any team yet — create or join one from the Teams tab.</Muted>
+          ) : (
+            <ChipMultiSelect
+              options={(myTeams.data ?? []).map((t) => ({ id: t.id, name: t.name }))}
+              selectedIds={input.sharedTeamIds}
+              onToggle={(id) => set('sharedTeamIds', toggleIn(input.sharedTeamIds, id))}
+            />
+          )}
+        </>
+      )}
+      <ErrorText>{errors.visibility}</ErrorText>
 
       <ErrorText>{submitError}</ErrorText>
       <Button

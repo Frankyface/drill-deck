@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-na
 
 import { DiagramCanvas } from '../../../components/DiagramCanvas';
 import { useDiagram } from '../../../features/diagrams';
-import { useDrill } from '../../../features/drills';
+import { useDrill, useForkDrill } from '../../../features/drills';
 import { useCategories, useEquipmentTypes, useSkillFocuses } from '../../../features/lookups';
 import {
   useAddDrillToProgression,
@@ -31,8 +31,9 @@ import { colors, font, spacing } from '../../../ui/theme';
 export default function DrillDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { profile, isAdmin, session } = useAuth();
+  const { profile, session } = useAuth();
   const { data: drill, isLoading } = useDrill(id);
+  const forkDrill = useForkDrill();
   const diagram = useDiagram(id);
   const reviews = useReviewsForDrill(id);
   const progressions = useProgressionsForDrill(id);
@@ -54,7 +55,9 @@ export default function DrillDetailScreen() {
     );
   }
 
-  const canEdit = isAdmin || drill.created_by === session?.user.id;
+  const isOwner = drill.created_by === session?.user.id;
+  const visibilityBadge =
+    drill.visibility === 'public' ? '🌍 Public' : drill.visibility === 'team' ? '👥 Team shared' : '🔒 Private';
   const nameOf = (list: { id: string; name: string }[] | undefined, lookupId: string) =>
     list?.find((x) => x.id === lookupId)?.name ?? '…';
 
@@ -66,9 +69,9 @@ export default function DrillDetailScreen() {
     <Screen testID="drill-detail-screen">
       <Title>{drill.name}</Title>
       <Muted>
-        {nameOf(categories.data, drill.category_id)} · {drill.min_players}–{drill.max_players}{' '}
-        players · {drill.duration_minutes} min · {drill.intensity} · {drill.level} ·{' '}
-        {drill.space_needed}
+        {visibilityBadge} · {nameOf(categories.data, drill.category_id)} · {drill.min_players}–
+        {drill.max_players} players · {drill.duration_minutes} min · {drill.intensity} ·{' '}
+        {drill.level} · {drill.space_needed}
       </Muted>
       {drill.avg_rating !== null && (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
@@ -76,8 +79,24 @@ export default function DrillDetailScreen() {
           <Muted>
             {drill.avg_rating.toFixed(1)} from {drill.review_count} review
             {drill.review_count === 1 ? '' : 's'}
+            {drill.team_count > 1 ? ` across ${drill.team_count} teams` : ''}
           </Muted>
         </View>
+      )}
+      {!isOwner && (
+        <Button
+          label={forkDrill.isPending ? 'Copying…' : '📋 Copy to my drills'}
+          variant="secondary"
+          loading={forkDrill.isPending}
+          onPress={() => {
+            if (!session) return;
+            forkDrill.mutate(
+              { drill, userId: session.user.id },
+              { onSuccess: (newId) => router.replace(`/drill/${newId}`) },
+            );
+          }}
+          testID="fork-drill"
+        />
       )}
 
       {/* Diagram */}
@@ -191,22 +210,22 @@ export default function DrillDetailScreen() {
         onPress={() => {
           if (!newGroupName.trim() || !profile) return;
           createGroup.mutate(
-            {
-              name: newGroupName,
-              clubId: profile.club_id,
-              userId: profile.id,
-              drillIds: [drill.id],
-            },
+            { name: newGroupName, userId: profile.id, drillIds: [drill.id] },
             { onSuccess: () => setNewGroupName('') },
           );
         }}
         testID="create-progression"
       />
 
-      {/* Reviews */}
+      {/* Reviews: raw notes are team-private; only the aggregate above crosses teams */}
       <SectionLabel>How it&apos;s gone at training</SectionLabel>
-      {(reviews.data ?? []).length === 0 && (
-        <Muted>No reviews yet — they&apos;re written after a session that used this drill.</Muted>
+      {(reviews.data ?? []).length === 0 ? (
+        <Muted>
+          No reviews visible — reviews are written after team sessions, and you only see your own
+          teams&apos; notes (the star rating above counts every team&apos;s).
+        </Muted>
+      ) : (
+        <Muted>Showing your teams&apos; reviews only.</Muted>
       )}
       {(reviews.data ?? []).map((review) => (
         <Card key={review.id}>
@@ -222,9 +241,9 @@ export default function DrillDetailScreen() {
         </Card>
       ))}
 
-      {canEdit && (
+      {isOwner && (
         <Button
-          label="Edit drill"
+          label="Edit drill & sharing"
           onPress={() => router.push(`/drill/${drill.id}/edit`)}
           testID="edit-drill"
         />

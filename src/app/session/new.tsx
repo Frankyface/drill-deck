@@ -2,8 +2,8 @@ import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Text } from 'react-native';
 
-import { useMyTeamIds, useTeams } from '../../features/club';
 import { useCreateSession } from '../../features/sessions';
+import { useMyTeams } from '../../features/teams';
 import { useAuth } from '../../providers/AuthProvider';
 import {
   Button,
@@ -15,7 +15,7 @@ import {
   SectionLabel,
   TextField,
 } from '../../ui/core';
-import { colors, spacing } from '../../ui/theme';
+import { colors } from '../../ui/theme';
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
@@ -23,9 +23,8 @@ function todayIso(): string {
 
 export default function NewSessionScreen() {
   const router = useRouter();
-  const { profile, isAdmin } = useAuth();
-  const teams = useTeams();
-  const myTeamIds = useMyTeamIds(profile?.id);
+  const { profile } = useAuth();
+  const myTeams = useMyTeams(profile?.id);
   const createSession = useCreateSession();
 
   const [teamId, setTeamId] = useState<string | null>(null);
@@ -33,25 +32,20 @@ export default function NewSessionScreen() {
   const [sessionDate, setSessionDate] = useState(todayIso());
   const [error, setError] = useState<string | null>(null);
 
-  // Coaches build sessions for their own teams; admin for any team.
-  const eligibleTeams = (teams.data ?? []).filter(
-    (team) => isAdmin || (myTeamIds.data ?? []).includes(team.id),
-  );
-
   return (
     <Screen testID="new-session-screen">
       <SectionLabel>Which team?</SectionLabel>
-      {eligibleTeams.length === 0 ? (
+      {(myTeams.data ?? []).length === 0 ? (
         <Muted>
-          You haven&apos;t joined a team yet — go to the{' '}
-          <Link href="/club">
-            <Text style={{ color: colors.primary, fontWeight: '700' }}>Club tab</Text>
+          Sessions belong to a team. Create or join one from the{' '}
+          <Link href="/teams">
+            <Text style={{ color: colors.primary, fontWeight: '700' }}>Teams tab</Text>
           </Link>{' '}
-          and tap your team first.
+          first.
         </Muted>
       ) : (
         <ChipRow>
-          {eligibleTeams.map((team) => (
+          {(myTeams.data ?? []).map((team) => (
             <Chip
               key={team.id}
               label={team.name}
@@ -89,13 +83,7 @@ export default function NewSessionScreen() {
             return setError('Date must look like 2026-07-14.');
           if (!profile) return;
           createSession.mutate(
-            {
-              teamId,
-              clubId: profile.club_id,
-              userId: profile.id,
-              title,
-              sessionDate: sessionDate.trim(),
-            },
+            { teamId, userId: profile.id, title, sessionDate: sessionDate.trim() },
             {
               onSuccess: (sessionId) => router.replace(`/session/${sessionId}/edit`),
               onError: (e) => setError(String(e)),

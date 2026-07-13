@@ -98,13 +98,11 @@ export function useCreateSession() {
   return useMutation({
     mutationFn: async ({
       teamId,
-      clubId,
       userId,
       title,
       sessionDate,
     }: {
       teamId: string;
-      clubId: string;
       userId: string;
       title: string;
       sessionDate: string;
@@ -113,7 +111,6 @@ export function useCreateSession() {
         .from('sessions')
         .insert({
           team_id: teamId,
-          club_id: clubId,
           created_by: userId,
           title: title.trim() || 'Training session',
           session_date: sessionDate,

@@ -16,13 +16,22 @@ import {
 } from '../../features/drillFilters';
 import { useDrills } from '../../features/drills';
 import { useCategories, useEquipmentTypes, useSkillFocuses } from '../../features/lookups';
+import { useAuth } from '../../providers/AuthProvider';
 import { Button, Chip, ChipRow, EmptyState, LoadingState, Muted, SectionLabel } from '../../ui/core';
 import { ChipMultiSelect, ChipSelect, Stepper } from '../../ui/pickers';
 import { colors, font, radius, spacing } from '../../ui/theme';
 
+const SCOPES = [
+  { key: 'all', label: 'All' },
+  { key: 'mine', label: 'Mine' },
+  { key: 'teams', label: 'Team shared' },
+  { key: 'public', label: 'Public' },
+] as const;
+
 export default function LibraryScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { session } = useAuth();
   const drills = useDrills();
   const scenes = useAllDiagramScenes();
   const categories = useCategories();
@@ -38,8 +47,8 @@ export default function LibraryScreen() {
     setFilters((prev) => ({ ...prev, [key]: value }));
 
   const visible = useMemo(
-    () => sortDrills(filterDrills(drills.data ?? [], filters), sort),
-    [drills.data, filters, sort],
+    () => sortDrills(filterDrills(drills.data ?? [], filters, session?.user.id), sort),
+    [drills.data, filters, sort, session?.user.id],
   );
 
   const activeCount = countActiveFilters(filters);
@@ -60,6 +69,17 @@ export default function LibraryScreen() {
         testID="search-input"
       />
 
+      <ChipRow>
+        {SCOPES.map((scope) => (
+          <Chip
+            key={scope.key}
+            label={scope.label}
+            selected={filters.scope === scope.key}
+            onPress={() => set('scope', scope.key)}
+            testID={`scope-${scope.key}`}
+          />
+        ))}
+      </ChipRow>
       <ChipRow>
         <Chip
           label={activeCount > 0 ? `Filters (${activeCount})` : 'Filters'}

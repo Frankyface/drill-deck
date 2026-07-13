@@ -4,7 +4,6 @@ import type { DrillListItem } from '../drills';
 function makeDrill(overrides: Partial<DrillListItem>): DrillListItem {
   return {
     id: 'd1',
-    club_id: 'club',
     name: 'Test drill',
     description: '',
     setup_instructions: '',
@@ -24,8 +23,11 @@ function makeDrill(overrides: Partial<DrillListItem>): DrillListItem {
     archived_at: null,
     skill_focus_ids: [],
     equipment_ids: [],
+    shared_team_ids: [],
+    visibility: 'private',
     avg_rating: null,
     review_count: 0,
+    team_count: 0,
     ...overrides,
   };
 }
@@ -133,6 +135,27 @@ describe('filterDrills', () => {
 
   test('minRating filter excludes unrated drills', () => {
     expect(filterDrills(all, { ...EMPTY_FILTERS, minRating: 4 }).map((d) => d.id)).toEqual(['b']);
+  });
+
+  test('scope filters: mine / team shared / public', () => {
+    const me = 'coach-1';
+    const mixed = [
+      makeDrill({ id: 'own', created_by: me, visibility: 'private' }),
+      makeDrill({ id: 'shared', created_by: 'coach-2', visibility: 'team', shared_team_ids: ['t1'] }),
+      makeDrill({ id: 'pub', created_by: 'coach-3', visibility: 'public' }),
+      makeDrill({ id: 'own-pub', created_by: me, visibility: 'public' }),
+    ];
+    expect(filterDrills(mixed, { ...EMPTY_FILTERS, scope: 'mine' }, me).map((d) => d.id)).toEqual([
+      'own',
+      'own-pub',
+    ]);
+    expect(filterDrills(mixed, { ...EMPTY_FILTERS, scope: 'teams' }, me).map((d) => d.id)).toEqual([
+      'shared',
+    ]);
+    expect(filterDrills(mixed, { ...EMPTY_FILTERS, scope: 'public' }, me).map((d) => d.id)).toEqual([
+      'pub',
+    ]);
+    expect(filterDrills(mixed, { ...EMPTY_FILTERS, scope: 'all' }, me)).toHaveLength(4);
   });
 });
 

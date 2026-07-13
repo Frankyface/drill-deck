@@ -23,7 +23,7 @@ export default function NewDrillScreen() {
           if (!profile || !session) return;
           setSubmitError(undefined);
           createDrill.mutate(
-            { input, clubId: profile.club_id, userId: session.user.id },
+            { input, userId: session.user.id },
             {
               onSuccess: (drillId) => router.replace(`/drill/${drillId}`),
               onError: (e) => setSubmitError(String(e)),

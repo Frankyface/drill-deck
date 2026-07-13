@@ -32,9 +32,9 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="club"
+        name="teams"
         options={{
-          title: 'Club',
+          title: 'Teams',
           tabBarIcon: ({ focused }) => <TabIcon glyph="🏉" focused={focused} />,
         }}
       />

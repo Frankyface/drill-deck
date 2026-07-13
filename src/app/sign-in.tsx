@@ -82,8 +82,11 @@ export default function SignInScreen() {
         <Button label="Sign in" onPress={signIn} loading={isSubmitting} testID="sign-in-button" />
         <Link href="/sign-up" style={{ alignSelf: 'center', padding: spacing.sm }}>
           <Text style={{ color: colors.primary, fontWeight: '700' }}>
-            New coach? Join with your club code
+            New coach? Create an account
           </Text>
+        </Link>
+        <Link href="/reset-password" style={{ alignSelf: 'center', padding: spacing.sm }}>
+          <Text style={{ color: colors.textMuted, fontWeight: '600' }}>Forgot password?</Text>
         </Link>
       </Card>
 

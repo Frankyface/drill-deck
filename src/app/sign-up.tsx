@@ -11,7 +11,7 @@ export default function SignUpScreen() {
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [inviteCode, setInviteCode] = useState('');
+  const [teamCode, setTeamCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -22,43 +22,33 @@ export default function SignUpScreen() {
     if (!displayName.trim()) return setError('Enter your name.');
     if (!email.trim()) return setError('Enter your email.');
     if (password.length < 8) return setError('Password needs at least 8 characters.');
-    if (!inviteCode.trim()) return setError('Enter your club invite code.');
 
     setIsSubmitting(true);
     try {
-      // Friendly pre-check so a typo'd code fails BEFORE account creation.
-      const { data: clubName, error: codeError } = await supabase.rpc('validate_invite_code', {
-        code: inviteCode,
-      });
-      if (codeError || !clubName) {
-        setError('That invite code doesn’t match any club. Double-check it with your admin.');
-        return;
-      }
-
       const { data, error: authError } = await supabase.auth.signUp({
         email: email.trim(),
         password,
-        options: {
-          data: {
-            display_name: displayName.trim(),
-            invite_code: inviteCode.trim().toUpperCase(),
-          },
-        },
+        options: { data: { display_name: displayName.trim() } },
       });
-      if (authError) {
-        setError(
-          authError.message.includes('INVALID_INVITE_CODE')
-            ? 'That invite code doesn’t match any club.'
-            : authError.message,
-        );
-        return;
-      }
+      if (authError) return setError(authError.message);
+
       if (data.session) {
-        router.replace('/'); // signed straight in (email confirmation off)
+        // Optional shortcut: a team code runs the normal join AFTER signup.
+        if (teamCode.trim()) {
+          const { error: joinError } = await supabase.rpc('join_team_by_code', {
+            code: teamCode,
+          });
+          if (joinError) {
+            setNotice(
+              'Account created! That team code didn’t match though — you can join from the Teams tab.',
+            );
+            setTimeout(() => router.replace('/'), 1500);
+            return;
+          }
+        }
+        router.replace('/');
       } else {
-        setNotice(
-          `Account created for ${clubName}! Check your email to confirm your address, then sign in.`,
-        );
+        setNotice('Account created! Check your email to confirm your address, then sign in.');
       }
     } finally {
       setIsSubmitting(false);
@@ -68,8 +58,10 @@ export default function SignUpScreen() {
   return (
     <Screen testID="sign-up-screen">
       <View style={{ marginTop: spacing.xl }}>
-        <Title>Join your club</Title>
-        <Muted>You need the invite code from your club admin.</Muted>
+        <Title>Create your account</Title>
+        <Muted>
+          Build your own drill library, create or join teams, and share drills with your coaches.
+        </Muted>
       </View>
 
       <Card style={{ marginTop: spacing.lg }}>
@@ -97,12 +89,12 @@ export default function SignUpScreen() {
           testID="password-input"
         />
         <TextField
-          label="Club invite code"
-          value={inviteCode}
-          onChangeText={setInviteCode}
+          label="Team invite code (optional)"
+          value={teamCode}
+          onChangeText={setTeamCode}
           autoCapitalize="characters"
-          placeholder="e.g. RUCK-…"
-          testID="invite-code-input"
+          placeholder="Got a code from a coach? Enter it here"
+          testID="team-code-input"
         />
         <ErrorText>{error}</ErrorText>
         {notice ? (

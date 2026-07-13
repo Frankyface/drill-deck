@@ -1,5 +1,6 @@
-// Generated from the Drill Deck Supabase project (avygkafazentnxtdlaoh).
-// Regenerate after migrations: Supabase MCP generate_typescript_types.
+// Generated from the Drill Deck Supabase project (avygkafazentnxtdlaoh)
+// after M6/M7 (standard accounts + teams + visibility). Regenerate after
+// migrations: Supabase MCP generate_typescript_types.
 export type Json =
   | string
   | number
@@ -14,27 +15,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      clubs: {
-        Row: {
-          created_at: string
-          id: string
-          invite_code: string
-          name: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          invite_code: string
-          name: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          invite_code?: string
-          name?: string
-        }
-        Relationships: []
-      }
       diagrams: {
         Row: {
           drill_id: string
@@ -79,32 +59,21 @@ export type Database = {
       }
       drill_categories: {
         Row: {
-          club_id: string
           id: string
           name: string
           sort_order: number
         }
         Insert: {
-          club_id: string
           id?: string
           name: string
           sort_order?: number
         }
         Update: {
-          club_id?: string
           id?: string
           name?: string
           sort_order?: number
         }
-        Relationships: [
-          {
-            foreignKeyName: "drill_categories_club_id_fkey"
-            columns: ["club_id"]
-            isOneToOne: false
-            referencedRelation: "clubs"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       drill_equipment: {
         Row: {
@@ -166,11 +135,40 @@ export type Database = {
           },
         ]
       }
+      drill_teams: {
+        Row: {
+          drill_id: string
+          team_id: string
+        }
+        Insert: {
+          drill_id: string
+          team_id: string
+        }
+        Update: {
+          drill_id?: string
+          team_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "drill_teams_drill_id_fkey"
+            columns: ["drill_id"]
+            isOneToOne: false
+            referencedRelation: "drills"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "drill_teams_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       drills: {
         Row: {
           archived_at: string | null
           category_id: string
-          club_id: string
           coaching_points: string
           created_at: string
           created_by: string
@@ -186,11 +184,11 @@ export type Database = {
           space_needed: string
           updated_at: string
           updated_by: string | null
+          visibility: string
         }
         Insert: {
           archived_at?: string | null
           category_id: string
-          club_id: string
           coaching_points?: string
           created_at?: string
           created_by: string
@@ -206,11 +204,11 @@ export type Database = {
           space_needed?: string
           updated_at?: string
           updated_by?: string | null
+          visibility?: string
         }
         Update: {
           archived_at?: string | null
           category_id?: string
-          club_id?: string
           coaching_points?: string
           created_at?: string
           created_by?: string
@@ -226,6 +224,7 @@ export type Database = {
           space_needed?: string
           updated_at?: string
           updated_by?: string | null
+          visibility?: string
         }
         Relationships: [
           {
@@ -233,13 +232,6 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "drill_categories"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "drills_club_id_fkey"
-            columns: ["club_id"]
-            isOneToOne: false
-            referencedRelation: "clubs"
             referencedColumns: ["id"]
           },
           {
@@ -260,32 +252,21 @@ export type Database = {
       }
       equipment_types: {
         Row: {
-          club_id: string
           id: string
           name: string
           sort_order: number
         }
         Insert: {
-          club_id: string
           id?: string
           name: string
           sort_order?: number
         }
         Update: {
-          club_id?: string
           id?: string
           name?: string
           sort_order?: number
         }
-        Relationships: [
-          {
-            foreignKeyName: "equipment_types_club_id_fkey"
-            columns: ["club_id"]
-            isOneToOne: false
-            referencedRelation: "clubs"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       health_check: {
         Row: {
@@ -307,71 +288,57 @@ export type Database = {
       }
       profiles: {
         Row: {
-          club_id: string
           created_at: string
           display_name: string
           id: string
-          role: string
         }
         Insert: {
-          club_id: string
           created_at?: string
           display_name: string
           id: string
-          role?: string
         }
         Update: {
-          club_id?: string
           created_at?: string
           display_name?: string
           id?: string
-          role?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "profiles_club_id_fkey"
-            columns: ["club_id"]
-            isOneToOne: false
-            referencedRelation: "clubs"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       progression_groups: {
         Row: {
-          club_id: string
           created_at: string
           created_by: string
           id: string
           name: string
+          team_id: string | null
         }
         Insert: {
-          club_id: string
           created_at?: string
           created_by: string
           id?: string
           name: string
+          team_id?: string | null
         }
         Update: {
-          club_id?: string
           created_at?: string
           created_by?: string
           id?: string
           name?: string
+          team_id?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "progression_groups_club_id_fkey"
-            columns: ["club_id"]
-            isOneToOne: false
-            referencedRelation: "clubs"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "progression_groups_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "progression_groups_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
             referencedColumns: ["id"]
           },
         ]
@@ -495,7 +462,6 @@ export type Database = {
       }
       sessions: {
         Row: {
-          club_id: string
           created_at: string
           created_by: string
           id: string
@@ -506,7 +472,6 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          club_id: string
           created_at?: string
           created_by: string
           id?: string
@@ -517,7 +482,6 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          club_id?: string
           created_at?: string
           created_by?: string
           id?: string
@@ -528,13 +492,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "sessions_club_id_fkey"
-            columns: ["club_id"]
-            isOneToOne: false
-            referencedRelation: "clubs"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "sessions_created_by_fkey"
             columns: ["created_by"]
@@ -553,44 +510,36 @@ export type Database = {
       }
       skill_focuses: {
         Row: {
-          club_id: string
           id: string
           name: string
           sort_order: number
         }
         Insert: {
-          club_id: string
           id?: string
           name: string
           sort_order?: number
         }
         Update: {
-          club_id?: string
           id?: string
           name?: string
           sort_order?: number
         }
-        Relationships: [
-          {
-            foreignKeyName: "skill_focuses_club_id_fkey"
-            columns: ["club_id"]
-            isOneToOne: false
-            referencedRelation: "clubs"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       team_coaches: {
         Row: {
           profile_id: string
+          role: string
           team_id: string
         }
         Insert: {
           profile_id: string
+          role?: string
           team_id: string
         }
         Update: {
           profile_id?: string
+          role?: string
           team_id?: string
         }
         Relationships: [
@@ -612,67 +561,71 @@ export type Database = {
       }
       teams: {
         Row: {
-          club_id: string
           created_at: string
+          created_by: string | null
           id: string
+          invite_code: string
           name: string
           sort_order: number
         }
         Insert: {
-          club_id: string
           created_at?: string
+          created_by?: string | null
           id?: string
+          invite_code?: string
           name: string
           sort_order?: number
         }
         Update: {
-          club_id?: string
           created_at?: string
+          created_by?: string | null
           id?: string
+          invite_code?: string
           name?: string
           sort_order?: number
         }
         Relationships: [
           {
-            foreignKeyName: "teams_club_id_fkey"
-            columns: ["club_id"]
+            foreignKeyName: "teams_created_by_fkey"
+            columns: ["created_by"]
             isOneToOne: false
-            referencedRelation: "clubs"
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
       }
     }
     Views: {
-      drill_rating_stats: {
-        Row: {
-          avg_rating: number | null
-          drill_id: string | null
-          review_count: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "session_items_drill_id_fkey"
-            columns: ["drill_id"]
-            isOneToOne: false
-            referencedRelation: "drills"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
+      [_ in never]: never
     }
     Functions: {
-      set_drill_tags: {
-        Args: { d: string; skill_ids: string[]; equipment_ids: string[] }
-        Returns: undefined
-      }
       can_edit_drill: { Args: { d: string }; Returns: boolean }
       can_edit_progression_group: { Args: { g: string }; Returns: boolean }
       can_edit_session: { Args: { s: string }; Returns: boolean }
-      current_club_id: { Args: never; Returns: string }
-      is_admin: { Args: never; Returns: boolean }
+      can_view_drill: { Args: { d: string }; Returns: boolean }
+      can_view_progression_group: { Args: { g: string }; Returns: boolean }
+      create_team: { Args: { team_name: string }; Returns: string }
+      get_drill_rating_stats: {
+        Args: never
+        Returns: {
+          avg_rating: number
+          drill_id: string
+          review_count: number
+          team_count: number
+        }[]
+      }
+      is_team_admin: { Args: { t: string }; Returns: boolean }
       is_team_coach: { Args: { t: string }; Returns: boolean }
-      validate_invite_code: { Args: { code: string }; Returns: string }
+      join_team_by_code: { Args: { code: string }; Returns: string }
+      regenerate_team_code: { Args: { t: string }; Returns: string }
+      set_drill_sharing: {
+        Args: { d: string; team_ids: string[]; vis: string }
+        Returns: undefined
+      }
+      set_drill_tags: {
+        Args: { d: string; equipment_ids: string[]; skill_ids: string[] }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
