@@ -7,7 +7,10 @@ export type DrillRow = Tables<'drills'>;
 export type DrillVisibility = 'private' | 'team' | 'public';
 
 export type DrillListItem = DrillRow & {
+  /** Name of the primary category (drills.category_id) — used for the card. */
   category_name: string;
+  /** All categories this drill carries; index 0 is the primary. */
+  category_ids: string[];
   skill_focus_ids: string[];
   equipment_ids: string[];
   shared_team_ids: string[];
@@ -21,7 +24,8 @@ export type DrillInput = {
   description: string;
   setupInstructions: string;
   coachingPoints: string;
-  categoryId: string;
+  /** Categories for this drill (non-empty). Index 0 is the primary category. */
+  categoryIds: string[];
   minPlayers: number;
   maxPlayers: number;
   spaceNeeded: string;
@@ -38,7 +42,7 @@ export type DrillInput = {
 export function validateDrillInput(input: DrillInput): Record<string, string> {
   const errors: Record<string, string> = {};
   if (!input.name.trim()) errors.name = 'Give the drill a name';
-  if (!input.categoryId) errors.categoryId = 'Pick a category';
+  if (input.categoryIds.length < 1) errors.categoryId = 'Pick at least one category';
   if (input.minPlayers < 1) errors.players = 'Minimum players must be at least 1';
   if (input.maxPlayers < input.minPlayers) errors.players = 'Max players must be ≥ min';
   if (input.durationMinutes < 1) errors.duration = 'Duration must be at least 1 minute';
@@ -50,6 +54,7 @@ export function validateDrillInput(input: DrillInput): Record<string, string> {
 
 type DrillQueryRow = DrillRow & {
   drill_categories: { name: string } | null;
+  drill_category_links: { category_id: string }[];
   drill_skill_focuses: { skill_focus_id: string }[];
   drill_equipment: { equipment_id: string }[];
   drill_teams: { team_id: string }[];
@@ -60,7 +65,7 @@ async function fetchDrills(): Promise<DrillListItem[]> {
     supabase
       .from('drills')
       .select(
-        '*, drill_categories(name), drill_skill_focuses(skill_focus_id), drill_equipment(equipment_id), drill_teams(team_id)',
+        '*, drill_categories(name), drill_category_links(category_id), drill_skill_focuses(skill_focus_id), drill_equipment(equipment_id), drill_teams(team_id)',
       )
       .order('created_at', { ascending: false }),
     // Anonymized cross-team aggregate — server-side, since RLS-filtered rows
@@ -73,11 +78,17 @@ async function fetchDrills(): Promise<DrillListItem[]> {
   const stats = new Map((statsRes.data ?? []).map((s) => [s.drill_id, s] as const));
 
   return (drillsRes.data as DrillQueryRow[]).map((row) => {
-    const { drill_categories, drill_skill_focuses, drill_equipment, drill_teams, ...drill } = row;
+    const { drill_categories, drill_category_links, drill_skill_focuses, drill_equipment, drill_teams, ...drill } =
+      row;
     const stat = stats.get(drill.id);
+    // Keep the primary category (drills.category_id) at index 0 so an
+    // edit round-trip never silently reassigns which category is primary.
+    const linkedIds = drill_category_links.map((r) => r.category_id);
+    const category_ids = [drill.category_id, ...linkedIds.filter((id) => id !== drill.category_id)];
     return {
       ...drill,
       category_name: drill_categories?.name ?? 'Uncategorised',
+      category_ids,
       skill_focus_ids: drill_skill_focuses.map((r) => r.skill_focus_id),
       equipment_ids: drill_equipment.map((r) => r.equipment_id),
       shared_team_ids: drill_teams.map((r) => r.team_id),
@@ -98,6 +109,12 @@ export function useDrill(drillId: string | undefined) {
 }
 
 async function saveTagsAndSharing(drillId: string, input: DrillInput): Promise<void> {
+  const categories = await supabase.rpc('set_drill_categories', {
+    d: drillId,
+    category_ids: input.categoryIds,
+  });
+  if (categories.error) throw new Error(`Could not save categories: ${categories.error.message}`);
+
   const tags = await supabase.rpc('set_drill_tags', {
     d: drillId,
     skill_ids: input.skillFocusIds,
@@ -119,7 +136,7 @@ function drillColumns(input: DrillInput) {
     description: input.description.trim(),
     setup_instructions: input.setupInstructions.trim(),
     coaching_points: input.coachingPoints.trim(),
-    category_id: input.categoryId,
+    category_id: input.categoryIds[0],
     min_players: input.minPlayers,
     max_players: input.maxPlayers,
     space_needed: input.spaceNeeded,
@@ -212,6 +229,13 @@ export function useForkDrill() {
         .select('id')
         .single();
       if (error) throw new Error(`Could not copy drill: ${error.message}`);
+
+      const categories = await supabase.rpc('set_drill_categories', {
+        d: data.id,
+        category_ids: drill.category_ids,
+      });
+      if (categories.error)
+        throw new Error(`Copied, but categories failed: ${categories.error.message}`);
 
       const tags = await supabase.rpc('set_drill_tags', {
         d: data.id,

@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { useMySessionReviews, useUpsertReview } from '../../../features/reviews';
-import { useSession, withPhaseHeaders } from '../../../features/sessions';
+import { sessionTeamName, useSession, withPhaseHeaders } from '../../../features/sessions';
 import { useAuth } from '../../../providers/AuthProvider';
 import {
   Button,
@@ -97,8 +97,8 @@ export default function SessionReviewScreen() {
     <Screen testID="session-review-screen">
       <Title>How did it go?</Title>
       <Muted>
-        {session.data.teams?.name} · {session.data.session_date}. Skip any drill you don&apos;t want
-        to rate.
+        {sessionTeamName(session.data.team_id, session.data.teams?.name)} ·{' '}
+        {session.data.session_date}. Skip any drill you don&apos;t want to rate.
       </Muted>
 
       {items.map((item) => (

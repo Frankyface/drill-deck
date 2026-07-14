@@ -33,7 +33,7 @@ export default function EditDrillScreen() {
     description: drill.description,
     setupInstructions: drill.setup_instructions,
     coachingPoints: drill.coaching_points,
-    categoryId: drill.category_id,
+    categoryIds: drill.category_ids,
     minPlayers: drill.min_players,
     maxPlayers: drill.max_players,
     spaceNeeded: drill.space_needed,

@@ -1,6 +1,5 @@
-import { Link, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Text } from 'react-native';
 
 import { useCreateSession } from '../../features/sessions';
 import { useMyTeams } from '../../features/teams';
@@ -15,11 +14,13 @@ import {
   SectionLabel,
   TextField,
 } from '../../ui/core';
-import { colors } from '../../ui/theme';
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
 }
+
+/** Who a new session is for: the coach alone, or one of their teams. */
+type SessionOwner = { kind: 'personal' } | { kind: 'team'; teamId: string };
 
 export default function NewSessionScreen() {
   const router = useRouter();
@@ -27,35 +28,31 @@ export default function NewSessionScreen() {
   const myTeams = useMyTeams(profile?.id);
   const createSession = useCreateSession();
 
-  const [teamId, setTeamId] = useState<string | null>(null);
+  const [owner, setOwner] = useState<SessionOwner | null>(null);
   const [title, setTitle] = useState('');
   const [sessionDate, setSessionDate] = useState(todayIso());
   const [error, setError] = useState<string | null>(null);
 
   return (
     <Screen testID="new-session-screen">
-      <SectionLabel>Which team?</SectionLabel>
-      {(myTeams.data ?? []).length === 0 ? (
-        <Muted>
-          Sessions belong to a team. Create or join one from the{' '}
-          <Link href="/teams">
-            <Text style={{ color: colors.primary, fontWeight: '700' }}>Teams tab</Text>
-          </Link>{' '}
-          first.
-        </Muted>
-      ) : (
-        <ChipRow>
-          {(myTeams.data ?? []).map((team) => (
-            <Chip
-              key={team.id}
-              label={team.name}
-              selected={teamId === team.id}
-              onPress={() => setTeamId(team.id)}
-              testID={`session-team-${team.name}`}
-            />
-          ))}
-        </ChipRow>
-      )}
+      <SectionLabel>Who&apos;s this session for?</SectionLabel>
+      <ChipRow>
+        <Chip
+          label="Just me (personal)"
+          selected={owner?.kind === 'personal'}
+          onPress={() => setOwner({ kind: 'personal' })}
+          testID="session-team-personal"
+        />
+        {(myTeams.data ?? []).map((team) => (
+          <Chip
+            key={team.id}
+            label={team.name}
+            selected={owner?.kind === 'team' && owner.teamId === team.id}
+            onPress={() => setOwner({ kind: 'team', teamId: team.id })}
+            testID={`session-team-${team.name}`}
+          />
+        ))}
+      </ChipRow>
 
       <TextField
         label="Session title"
@@ -78,10 +75,11 @@ export default function NewSessionScreen() {
         loading={createSession.isPending}
         onPress={() => {
           setError(null);
-          if (!teamId) return setError('Pick a team.');
+          if (!owner) return setError('Pick who this session is for.');
           if (!/^\d{4}-\d{2}-\d{2}$/.test(sessionDate.trim()))
             return setError('Date must look like 2026-07-14.');
           if (!profile) return;
+          const teamId = owner.kind === 'team' ? owner.teamId : null;
           createSession.mutate(
             { teamId, userId: profile.id, title, sessionDate: sessionDate.trim() },
             {

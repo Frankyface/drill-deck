@@ -69,7 +69,8 @@ export default function DrillDetailScreen() {
     <Screen testID="drill-detail-screen">
       <Title>{drill.name}</Title>
       <Muted>
-        {visibilityBadge} · {nameOf(categories.data, drill.category_id)} · {drill.min_players}–
+        {visibilityBadge} · {drill.category_ids.map((id) => nameOf(categories.data, id)).join(' / ')}{' '}
+        · {drill.min_players}–
         {drill.max_players} players · {drill.duration_minutes} min · {drill.intensity} ·{' '}
         {drill.level} · {drill.space_needed}
       </Muted>

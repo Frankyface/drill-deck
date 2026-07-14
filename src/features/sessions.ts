@@ -38,6 +38,19 @@ export function sessionTotalMinutes(items: Pick<SessionItemRow, 'duration_minute
   return items.reduce((sum, item) => sum + item.duration_minutes, 0);
 }
 
+/**
+ * Pure: the label to show for a session's owner. Personal sessions carry no
+ * team (team_id null, so the teams join is null) and read as "Personal";
+ * team sessions show the team's name.
+ */
+export function sessionTeamName(
+  teamId: string | null,
+  teamName: string | null | undefined,
+): string {
+  if (teamId === null) return 'Personal';
+  return teamName ?? 'Unknown team';
+}
+
 /** Pure: ordered items annotated with a flag for rendering phase headers. */
 export function withPhaseHeaders<T extends Pick<SessionItemRow, 'phase' | 'sort_order'>>(
   items: T[],
@@ -66,7 +79,7 @@ export function useSessions() {
         };
         return {
           ...session,
-          team_name: teams?.name ?? 'Unknown team',
+          team_name: sessionTeamName(session.team_id, teams?.name),
           drill_count: session_items.length,
           total_minutes: sessionTotalMinutes(session_items),
         };
@@ -102,7 +115,7 @@ export function useCreateSession() {
       title,
       sessionDate,
     }: {
-      teamId: string;
+      teamId: string | null;
       userId: string;
       title: string;
       sessionDate: string;

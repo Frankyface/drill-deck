@@ -6,6 +6,7 @@ import { EMPTY_FILTERS, filterDrills } from '../../../features/drillFilters';
 import { useDrills } from '../../../features/drills';
 import {
   SESSION_PHASES,
+  sessionTeamName,
   sessionTotalMinutes,
   useAddSessionItem,
   useRemoveSessionItem,
@@ -86,7 +87,8 @@ export default function SessionEditScreen() {
     <Screen testID="session-edit-screen">
       <Title>{session.data.title}</Title>
       <Muted>
-        {session.data.teams?.name} · {session.data.session_date} · {totalMinutes} min planned
+        {sessionTeamName(session.data.team_id, session.data.teams?.name)} ·{' '}
+        {session.data.session_date} · {totalMinutes} min planned
       </Muted>
 
       <SectionLabel>Session plan</SectionLabel>

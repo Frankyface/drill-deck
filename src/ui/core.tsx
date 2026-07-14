@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -39,18 +41,25 @@ export function Screen({
     );
   }
   return (
-    <ScrollView
-      testID={testID}
+    <KeyboardAvoidingView
       style={styles.screen}
-      contentContainerStyle={{
-        paddingTop: insets.top + pad,
-        paddingHorizontal: pad,
-        paddingBottom: insets.bottom + spacing.xxl,
-      }}
-      keyboardShouldPersistTaps="handled"
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      {children}
-    </ScrollView>
+      <ScrollView
+        testID={testID}
+        style={styles.screen}
+        contentContainerStyle={{
+          paddingTop: insets.top + pad,
+          paddingHorizontal: pad,
+          paddingBottom: insets.bottom + spacing.xxl,
+        }}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+        automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+      >
+        {children}
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

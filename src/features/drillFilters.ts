@@ -69,7 +69,9 @@ export function filterDrills(
       if (!haystack.includes(needle)) return false;
     }
 
-    if (f.categoryId && drill.category_id !== f.categoryId) return false;
+    // Single-select filter, multi-category drills: match if the drill carries
+    // the chosen category among its set (its primary or any secondary).
+    if (f.categoryId && !drill.category_ids.includes(f.categoryId)) return false;
 
     if (f.skillFocusIds.length > 0) {
       const hasAll = f.skillFocusIds.every((id) => drill.skill_focus_ids.includes(id));

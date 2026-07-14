@@ -75,6 +75,36 @@ export type Database = {
         }
         Relationships: []
       }
+      drill_category_links: {
+        Row: {
+          category_id: string
+          drill_id: string
+        }
+        Insert: {
+          category_id: string
+          drill_id: string
+        }
+        Update: {
+          category_id?: string
+          drill_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "drill_category_links_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "drill_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "drill_category_links_drill_id_fkey"
+            columns: ["drill_id"]
+            isOneToOne: false
+            referencedRelation: "drills"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       drill_equipment: {
         Row: {
           drill_id: string
@@ -467,7 +497,7 @@ export type Database = {
           id: string
           notes: string
           session_date: string
-          team_id: string
+          team_id: string | null
           title: string
           updated_at: string
         }
@@ -477,7 +507,7 @@ export type Database = {
           id?: string
           notes?: string
           session_date?: string
-          team_id: string
+          team_id?: string | null
           title?: string
           updated_at?: string
         }
@@ -487,7 +517,7 @@ export type Database = {
           id?: string
           notes?: string
           session_date?: string
-          team_id?: string
+          team_id?: string | null
           title?: string
           updated_at?: string
         }
@@ -618,6 +648,10 @@ export type Database = {
       is_team_coach: { Args: { t: string }; Returns: boolean }
       join_team_by_code: { Args: { code: string }; Returns: string }
       regenerate_team_code: { Args: { t: string }; Returns: string }
+      set_drill_categories: {
+        Args: { d: string; category_ids: string[] }
+        Returns: undefined
+      }
       set_drill_sharing: {
         Args: { d: string; team_ids: string[]; vis: string }
         Returns: undefined

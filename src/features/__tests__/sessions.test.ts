@@ -1,4 +1,4 @@
-import { sessionTotalMinutes, withPhaseHeaders } from '../sessions';
+import { sessionTeamName, sessionTotalMinutes, withPhaseHeaders } from '../sessions';
 
 describe('sessionTotalMinutes', () => {
   test('sums durations, zero for empty', () => {
@@ -10,6 +10,21 @@ describe('sessionTotalMinutes', () => {
         { duration_minutes: 20 },
       ]),
     ).toBe(45);
+  });
+});
+
+describe('sessionTeamName', () => {
+  test('personal session (no team) reads as "Personal"', () => {
+    expect(sessionTeamName(null, null)).toBe('Personal');
+    expect(sessionTeamName(null, undefined)).toBe('Personal');
+  });
+
+  test('team session shows the joined team name', () => {
+    expect(sessionTeamName('team-1', 'Under-14s')).toBe('Under-14s');
+  });
+
+  test('team session with a missing joined name falls back gracefully', () => {
+    expect(sessionTeamName('team-1', null)).toBe('Unknown team');
   });
 });
 

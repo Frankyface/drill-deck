@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import {
+  sessionTeamName,
   sessionTotalMinutes,
   useSession,
   withPhaseHeaders,
@@ -117,8 +118,8 @@ export default function SessionDetailScreen() {
     <Screen testID="session-detail-screen">
       <Title>{session.data.title}</Title>
       <Muted>
-        {session.data.teams?.name} · {session.data.session_date} · {items.length} drills ·{' '}
-        {total} min
+        {sessionTeamName(session.data.team_id, session.data.teams?.name)} ·{' '}
+        {session.data.session_date} · {items.length} drills · {total} min
       </Muted>
 
       <View style={styles.actionRow}>

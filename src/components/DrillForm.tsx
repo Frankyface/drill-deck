@@ -14,7 +14,7 @@ export const EMPTY_DRILL_INPUT: DrillInput = {
   description: '',
   setupInstructions: '',
   coachingPoints: '',
-  categoryId: '',
+  categoryIds: [],
   minPlayers: 4,
   maxPlayers: 12,
   spaceNeeded: 'any',
@@ -91,17 +91,11 @@ export function DrillForm({
       />
 
       <SectionLabel>Category *</SectionLabel>
-      <ChipRow>
-        {(categories.data ?? []).map((cat) => (
-          <Chip
-            key={cat.id}
-            label={cat.name}
-            selected={input.categoryId === cat.id}
-            onPress={() => set('categoryId', cat.id)}
-            testID={`category-${cat.name}`}
-          />
-        ))}
-      </ChipRow>
+      <ChipMultiSelect
+        options={categories.data ?? []}
+        selectedIds={input.categoryIds}
+        onToggle={(id) => set('categoryIds', toggleIn(input.categoryIds, id))}
+      />
       <ErrorText>{errors.categoryId}</ErrorText>
 
       <SectionLabel>Players *</SectionLabel>

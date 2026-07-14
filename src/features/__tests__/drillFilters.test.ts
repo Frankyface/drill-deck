@@ -2,14 +2,17 @@ import { countActiveFilters, EMPTY_FILTERS, filterDrills, sortDrills } from '../
 import type { DrillListItem } from '../drills';
 
 function makeDrill(overrides: Partial<DrillListItem>): DrillListItem {
+  // category_ids defaults to the single primary category unless overridden.
+  const categoryId = overrides.category_id ?? 'cat-passing';
   return {
     id: 'd1',
     name: 'Test drill',
     description: '',
     setup_instructions: '',
     coaching_points: '',
-    category_id: 'cat-passing',
+    category_id: categoryId,
     category_name: 'Passing',
+    category_ids: [categoryId],
     min_players: 4,
     max_players: 12,
     space_needed: 'any',
@@ -83,6 +86,17 @@ describe('filterDrills', () => {
   test('category filter', () => {
     const result = filterDrills(all, { ...EMPTY_FILTERS, categoryId: 'cat-breakdown' });
     expect(result.map((d) => d.id)).toEqual(['a']);
+  });
+
+  test('a multi-category drill matches a filter for any of its categories', () => {
+    const multi = makeDrill({ id: 'multi', category_id: 'a', category_ids: ['a', 'b'] });
+    expect(
+      filterDrills([multi], { ...EMPTY_FILTERS, categoryId: 'b' }).map((d) => d.id),
+    ).toEqual(['multi']);
+    expect(
+      filterDrills([multi], { ...EMPTY_FILTERS, categoryId: 'a' }).map((d) => d.id),
+    ).toEqual(['multi']);
+    expect(filterDrills([multi], { ...EMPTY_FILTERS, categoryId: 'c' })).toHaveLength(0);
   });
 
   test('player count must fall inside the drill range', () => {
