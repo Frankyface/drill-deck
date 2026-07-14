@@ -6,7 +6,7 @@ import {
   PITCH_LENGTH_M,
   PITCH_WIDTH_M,
   type ArrowElement,
-  type SceneV3,
+  type SceneV4,
 } from '../scene/schema';
 import { colors } from '../ui/theme';
 import { SvgPitch } from './SvgPitch';
@@ -66,7 +66,7 @@ export function DiagramCanvas({
   widthPx,
   tokenSize,
 }: {
-  scene: SceneV3;
+  scene: SceneV4;
   widthPx: number;
   tokenSize?: number;
 }) {
@@ -110,18 +110,23 @@ export function DiagramCanvas({
           );
         })}
       </Svg>
-      {tokens.map((el) => (
-        <View
-          key={el.id}
-          style={{
-            position: 'absolute',
-            left: el.position.x * scale - size / 2,
-            top: el.position.y * scale - size / 2,
-          }}
-        >
-          <TokenView element={el} size={size} />
-        </View>
-      ))}
+      {tokens.map((el) => {
+        // A held ball rides its holder's position; everything else uses its own.
+        const holder =
+          el.type === 'ball' && el.heldBy
+            ? scene.elements.find((e) => e.id === el.heldBy)
+            : undefined;
+        const cx = holder ? holder.position.x * scale + size * 0.28 : el.position.x * scale;
+        const cy = holder ? holder.position.y * scale - size * 0.5 : el.position.y * scale;
+        return (
+          <View
+            key={el.id}
+            style={{ position: 'absolute', left: cx - size / 2, top: cy - size / 2 }}
+          >
+            <TokenView element={el} size={size} />
+          </View>
+        );
+      })}
       {scene.runs.length > 0 || scene.passes.length > 0 ? (
         <View
           style={{

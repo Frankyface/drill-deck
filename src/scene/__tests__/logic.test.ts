@@ -13,7 +13,7 @@ import {
   snapToGrid,
   undo,
 } from '../logic';
-import { createEmptyScene, type PlayerElement } from '../schema';
+import { createEmptyScene, type PlayerElement, type SceneV4 } from '../schema';
 
 const player = (id: string): PlayerElement => ({
   id,
@@ -55,13 +55,13 @@ describe('immutable scene operations', () => {
     expect(scene.elements[0].position).toEqual({ x: 35, y: 50 });
   });
 
-  test('removeElement drops the run, truncates the pass chain, clears carrier', () => {
+  test('removeElement drops the run and truncates the pass chain at the removed player', () => {
     let scene = addElement(createEmptyScene(), player('p1'));
     scene = addElement(scene, player('p2'));
     scene = addElement(scene, player('p3'));
+    scene = addElement(scene, { id: 'ball1', type: 'ball', position: { x: 35, y: 50 }, heldBy: 'p1' });
     scene = {
       ...scene,
-      carrierId: 'p1',
       runs: [
         {
           elementId: 'p2',
@@ -73,19 +73,15 @@ describe('immutable scene operations', () => {
         },
       ],
       passes: [
-        { id: 'a', fromId: 'p1', toId: 'p2', releaseFrac: 0.5, type: 'spin' },
-        { id: 'b', fromId: 'p2', toId: 'p3', releaseFrac: 0.5, type: 'spin' },
+        { id: 'a', ballId: 'ball1', fromId: 'p1', toId: 'p2', releaseFrac: 0.5, type: 'spin' },
+        { id: 'b', ballId: 'ball1', fromId: 'p2', toId: 'p3', releaseFrac: 0.5, type: 'spin' },
       ],
     };
     const next = removeElement(scene, 'p2');
-    expect(next.elements.map((e) => e.id)).toEqual(['p1', 'p3']);
+    expect(next.elements.map((e) => e.id)).toEqual(['p1', 'p3', 'ball1']);
     expect(next.runs).toHaveLength(0);
     // chain truncated from the first pass involving p2 (both of them here)
     expect(next.passes).toHaveLength(0);
-    expect(next.carrierId).toBe('p1');
-
-    const carrierGone = removeElement(scene, 'p1');
-    expect(carrierGone.carrierId).toBeNull();
   });
 });
 
@@ -118,5 +114,27 @@ describe('newElementId', () => {
   test('generates unique ids', () => {
     const ids = new Set(Array.from({ length: 200 }, () => newElementId()));
     expect(ids.size).toBe(200);
+  });
+});
+
+describe('removeElement multi-ball independence (audit regression)', () => {
+  test('removing a player only truncates the ball chains they are in', () => {
+    const scene: SceneV4 = {
+      ...createEmptyScene(),
+      elements: [
+        player('X'),
+        player('R'),
+        player('M'),
+        player('N'),
+        { id: 'b1', type: 'ball', position: { x: 0, y: 0 }, heldBy: 'X' },
+        { id: 'b2', type: 'ball', position: { x: 20, y: 0 }, heldBy: 'M' },
+      ],
+      passes: [
+        { id: 'p1', ballId: 'b1', fromId: 'X', toId: 'R', releaseFrac: 0.5, type: 'spin' },
+        { id: 'p2', ballId: 'b2', fromId: 'M', toId: 'N', releaseFrac: 0.5, type: 'spin' },
+      ],
+    };
+    // R is only in ball b1's chain; ball b2's independent pass must survive.
+    expect(removeElement(scene, 'R').passes.map((p) => p.id)).toEqual(['p2']);
   });
 });

@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { DrillListItem } from '../features/drills';
-import type { SceneV3 } from '../scene/schema';
+import type { SceneV4 } from '../scene/schema';
 import { colors, font, radius, spacing } from '../ui/theme';
 import { DiagramCanvas } from './DiagramCanvas';
 
@@ -13,7 +13,7 @@ export function DrillCard({
   onPress,
 }: {
   drill: DrillListItem;
-  scene?: SceneV3 | null;
+  scene?: SceneV4 | null;
   onPress: () => void;
 }) {
   return (
