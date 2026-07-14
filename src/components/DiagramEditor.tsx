@@ -128,7 +128,8 @@ export function DiagramEditor({
   const selectedRun = scene.runs.find((r) => r.elementId === selectedId);
   const carrierAtEnd = chainEndCarrier(scene);
 
-  const handleAnimateTap = (meters: Vec2) => {
+  const handleAnimateTap = (pxX: number, pxY: number) => {
+    const meters = pxToMeters({ x: pxX, y: pxY }, scale);
     const player = playerAt(scene, meters);
     if (!player) {
       setSelectedId(null);
@@ -155,16 +156,17 @@ export function DiagramEditor({
     setSelectedId(player.id);
   };
 
-  const startDraw = (meters: Vec2) => {
+  const startDraw = (pxX: number, pxY: number) => {
+    const meters = pxToMeters({ x: pxX, y: pxY }, scale);
     const player = playerAt(scene, meters);
     drawTarget.current = player?.id ?? null;
     drawSamples.current = player ? [player.position] : [];
     if (player) setSelectedId(player.id);
   };
 
-  const pushDrawSample = (meters: Vec2) => {
+  const pushDrawSample = (pxX: number, pxY: number) => {
     if (!drawTarget.current) return;
-    drawSamples.current.push(meters);
+    drawSamples.current.push(pxToMeters({ x: pxX, y: pxY }, scale));
     if (drawSamples.current.length % 3 === 0) setDrawPreview([...drawSamples.current]);
   };
 
@@ -263,14 +265,14 @@ export function DiagramEditor({
     .enabled(isArrowMode || isAnimateMode)
     .onStart((e) => {
       if (isAnimateMode) {
-        runOnJS(startDraw)(pxToMeters({ x: e.x, y: e.y }, scale));
+        runOnJS(startDraw)(e.x, e.y);
       } else {
         runOnJS(pushArrowSample)(e.x, e.y);
       }
     })
     .onUpdate((e) => {
       if (isAnimateMode) {
-        runOnJS(pushDrawSample)(pxToMeters({ x: e.x, y: e.y }, scale));
+        runOnJS(pushDrawSample)(e.x, e.y);
       } else {
         runOnJS(pushArrowSample)(e.x, e.y);
       }
@@ -286,7 +288,7 @@ export function DiagramEditor({
   const canvasTap = Gesture.Tap()
     .enabled(isAnimateMode)
     .onEnd((e) => {
-      runOnJS(handleAnimateTap)(pxToMeters({ x: e.x, y: e.y }, scale));
+      runOnJS(handleAnimateTap)(e.x, e.y);
     });
 
   const canvasGesture = Gesture.Exclusive(canvasPan, canvasTap);

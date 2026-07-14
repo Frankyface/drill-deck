@@ -12,18 +12,22 @@ export const DEFAULT_GRID_M = 2.5;
 
 /** px-per-meter scale for a canvas of the given width (pitch is width-fit). */
 export function scaleForCanvas(canvasWidthPx: number): number {
+  'worklet';
   return canvasWidthPx / PITCH_WIDTH_M;
 }
 
 export function metersToPx(pos: Vec2, scale: number): Vec2 {
+  'worklet';
   return { x: pos.x * scale, y: pos.y * scale };
 }
 
 export function pxToMeters(px: Vec2, scale: number): Vec2 {
+  'worklet';
   return { x: px.x / scale, y: px.y / scale };
 }
 
 export function clampToPitch(pos: Vec2): Vec2 {
+  'worklet';
   return {
     x: Math.min(PITCH_WIDTH_M, Math.max(0, pos.x)),
     y: Math.min(PITCH_LENGTH_M, Math.max(0, pos.y)),
@@ -31,6 +35,7 @@ export function clampToPitch(pos: Vec2): Vec2 {
 }
 
 export function snapToGrid(pos: Vec2, gridM: number = DEFAULT_GRID_M): Vec2 {
+  'worklet';
   return clampToPitch({
     x: Math.round(pos.x / gridM) * gridM,
     y: Math.round(pos.y / gridM) * gridM,

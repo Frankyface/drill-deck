@@ -57,3 +57,17 @@ Dev builds masked it because Metro on the PC loads the local .env.
 vars for ALL environments (production/preview/development) — done via
 `eas env:create`, verify with `eas env:list --environment production` before
 any store build. The fail-fast throw stays: it caught a real misconfiguration.
+
+## 2026-07-13 — Animate mode crashed on device (TestFlight build 3)
+**Why it failed:** canvas gesture callbacks are auto-workletized (run on the
+Reanimated UI thread in release builds) and called `pxToMeters` — a plain JS
+function with no 'worklet' directive. On-device that throws inside the UI
+event worklet → unhandled worklet exception → SIGABRT. Invisible in browser
+testing because web runs one JS thread — device-only crash class.
+· **Do instead:** worklet side ships only raw numbers through runOnJS; do all
+conversion/logic JS-side. Geometry helpers in scene/logic.ts now carry
+'worklet' directives as belt-and-braces. RULE: any function transitively
+called from a Gesture.* callback, useAnimatedStyle/useDerivedValue body, or
+animation completion callback must have 'worklet' as its first statement or
+be reached via runOnJS. An Opus audit swept all UI-thread call sites clean
+(2026-07-13); re-audit after touching gesture/animation code.
